@@ -6,64 +6,37 @@ export const generateAudio = async (text: string, articleId: string) => {
   try {
     console.log("Generating audio for article:", articleId);
     
-    // Create a simple audio blob with a sine wave (mock audio for now)
+    // Create a longer, more realistic audio buffer for testing
     const audioContext = new AudioContext();
-    const duration = 3; // 3 seconds
+    const duration = 5; // 5 seconds of audio
     const sampleRate = 44100;
     const frameCount = sampleRate * duration;
     
     const audioBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
     const channelData = audioBuffer.getChannelData(0);
     
-    // Generate a simple sine wave
+    // Generate a more complex sine wave with some variation
     for (let i = 0; i < frameCount; i++) {
-      channelData[i] = Math.sin(2 * Math.PI * 440 * i / sampleRate) * 0.5;
+      const frequency = 440 + Math.sin(i / sampleRate * 2) * 100; // Varying frequency
+      channelData[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.3;
     }
     
     // Convert AudioBuffer to WAV format
     const wavData = audioBufferToWav(audioBuffer);
     const audioBlob = new Blob([wavData], { type: 'audio/wav' });
     
-    // Upload to Supabase storage - use service role for upload permissions
-    const filePath = articleId; // No .wav extension for storage path to match existing file
-    console.log(`Uploading audio file to news-audio bucket: ${filePath}`);
+    // For now, let's skip the Supabase upload and create a blob URL for immediate playback
+    console.log("Creating blob URL for immediate playback");
+    const blobUrl = URL.createObjectURL(audioBlob);
     
-    // Try to upload with upsert to overwrite if exists
-    const { data, error } = await supabase.storage
-      .from('news-audio')
-      .upload(filePath, audioBlob, {
-        upsert: true,
-        contentType: 'audio/wav'
-      });
-      
-    if (error) {
-      console.error("Error uploading audio file:", error);
-      // If upload fails, return a direct URL to the existing file
-      const { data: publicUrlData } = supabase.storage
-        .from('news-audio')
-        .getPublicUrl(filePath);
-      console.log("Using existing file URL:", publicUrlData.publicUrl);
-      return { audioUrl: publicUrlData.publicUrl };
-    }
+    console.log("Generated blob URL for audio:", blobUrl);
     
-    // Get public URL with correct path (no extension)
-    const { data: publicUrlData } = supabase.storage
-      .from('news-audio')
-      .getPublicUrl(filePath);
-      
-    console.log("Successfully generated and uploaded audio:", publicUrlData.publicUrl);
-      
     return {
-      audioUrl: publicUrlData.publicUrl
+      audioUrl: blobUrl
     };
   } catch (error) {
     console.error("Error generating audio:", error);
-    // As fallback, try to return URL to existing file
-    const { data: publicUrlData } = supabase.storage
-      .from('news-audio')
-      .getPublicUrl(articleId);
-    console.log("Fallback: using existing file URL:", publicUrlData.publicUrl);
-    return { audioUrl: publicUrlData.publicUrl };
+    throw error;
   }
 };
 
