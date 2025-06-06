@@ -30,24 +30,33 @@ const NewsBroadcastPlayer = ({
   // Get the current article from the filtered articles array
   const currentArticle = articles[currentIndex];
 
+  // Function to stop current audio
+  const stopCurrentAudio = () => {
+    if (audioRef.current) {
+      console.log("Stopping current audio");
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      audioRef.current = null;
+      setIsPlaying(false);
+    }
+  };
+
   // Clean up audio when component unmounts or articles change
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-        audioRef.current = null;
-      }
+      stopCurrentAudio();
     };
   }, []);
 
   // Stop playing when articles change (filters applied)
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
+    stopCurrentAudio();
   }, [articles]);
+
+  // Stop audio when current index changes (next/previous)
+  useEffect(() => {
+    stopCurrentAudio();
+  }, [currentIndex]);
 
   // Reset to first article when articles change
   useEffect(() => {
@@ -61,11 +70,8 @@ const NewsBroadcastPlayer = ({
       console.log("Playing audio for article in broadcast:", article.id, article.headline);
       setIsLoading(true);
       
-      // Stop any existing audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-      }
+      // Stop any existing audio first
+      stopCurrentAudio();
       
       // Get or generate audio for this specific article
       const audioUrl = await getOrGenerateAudio(article);
@@ -189,6 +195,18 @@ const NewsBroadcastPlayer = ({
     }
   };
 
+  const handleNext = () => {
+    console.log("Next button clicked, stopping current audio");
+    stopCurrentAudio();
+    onNext();
+  };
+
+  const handlePrevious = () => {
+    console.log("Previous button clicked, stopping current audio");
+    stopCurrentAudio();
+    onPrevious();
+  };
+
   // Don't render if no articles available
   if (!articles.length || !currentArticle) {
     return (
@@ -203,7 +221,7 @@ const NewsBroadcastPlayer = ({
       <Button
         variant="outline"
         size="sm"
-        onClick={onPrevious}
+        onClick={handlePrevious}
         disabled={currentIndex === 0 || isLoading}
         className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface hover:text-cred-gray-100 disabled:opacity-30 h-10 w-10 p-0"
       >
@@ -239,7 +257,7 @@ const NewsBroadcastPlayer = ({
       <Button
         variant="outline"
         size="sm"
-        onClick={onNext}
+        onClick={handleNext}
         disabled={currentIndex === articles.length - 1 || isLoading}
         className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface hover:text-cred-gray-100 disabled:opacity-30 h-10 w-10 p-0"
       >
