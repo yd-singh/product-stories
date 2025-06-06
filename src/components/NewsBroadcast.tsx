@@ -118,29 +118,29 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
   }
 
   return (
-    <Card className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 backdrop-blur-sm border-white/10 mb-8">
+    <Card className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 backdrop-blur-sm border border-white/10 mb-8">
       <CardHeader>
-        <CardTitle className="text-white flex items-center gap-2">
-          <Volume2 className="w-5 h-5" />
+        <CardTitle className="text-white flex items-center gap-3">
+          <Volume2 className="w-6 h-6" />
           News Broadcast
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+          <Badge className="bg-red-500/20 text-red-400 border border-red-500/30">
             Live
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Current Article Display */}
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="flex items-start justify-between mb-2">
-              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+            <div className="flex items-start justify-between mb-3">
+              <Badge className="bg-blue-500/20 text-blue-300 border border-blue-500/40">
                 {currentArticle?.topic}
               </Badge>
-              <span className="text-white/60 text-sm">
+              <span className="text-white/60 text-sm font-medium">
                 {currentIndex + 1} of {articles.length}
               </span>
             </div>
-            <h3 className="text-white font-semibold mb-2">
+            <h3 className="text-white font-semibold mb-2 text-lg">
               {currentArticle?.headline}
             </h3>
             <p className="text-white/70 text-sm line-clamp-2">
@@ -155,14 +155,14 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
               size="sm"
               onClick={playPrevious}
               disabled={currentIndex === 0}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white disabled:opacity-50"
             >
               <SkipBack className="w-4 h-4" />
             </Button>
             
             <Button
               onClick={togglePlayback}
-              className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700"
+              className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white shadow-lg px-6"
             >
               {isPlaying ? (
                 <Pause className="w-4 h-4 mr-2" />
@@ -177,7 +177,7 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
               size="sm"
               onClick={playNext}
               disabled={currentIndex === articles.length - 1}
-              className="border-white/20 text-white hover:bg-white/10"
+              className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white disabled:opacity-50"
             >
               <SkipForward className="w-4 h-4" />
             </Button>

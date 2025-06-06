@@ -119,7 +119,7 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
           variant="outline"
           onClick={handlePlayAudio}
           disabled={loadingAction === 'play-audio'}
-          className="border-white/20 text-white hover:bg-white/10"
+          className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white disabled:opacity-50"
         >
           {loadingAction === 'play-audio' ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -130,11 +130,15 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline" className="border-white/20 text-white hover:bg-white/10">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white"
+            >
               Actions
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-slate-800 border-white/20">
+          <DropdownMenuContent className="bg-slate-800/95 backdrop-blur-sm border-white/20 z-50">
             {actions.map((action) => {
               const Icon = action.icon;
               return (
@@ -142,7 +146,7 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
                   key={action.id}
                   onClick={() => handleAction(action.id, action.label)}
                   disabled={loadingAction === action.id}
-                  className="text-white hover:bg-white/10"
+                  className="text-white hover:bg-white/20 focus:bg-white/20 cursor-pointer"
                 >
                   {loadingAction === action.id ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -165,7 +169,7 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
         <Button
           onClick={handlePlayAudio}
           disabled={loadingAction === 'play-audio'}
-          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg"
         >
           {loadingAction === 'play-audio' ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -174,12 +178,12 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
           )}
           Play Audio
         </Button>
-        <Badge variant="outline" className="text-white/60 border-white/20">
+        <Badge variant="outline" className="text-white/60 border-white/30 bg-white/5">
           AI Generated Content
         </Badge>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {actions.map((action) => {
           const Icon = action.icon;
           return (
@@ -189,14 +193,14 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
               size="sm"
               onClick={() => handleAction(action.id, action.label)}
               disabled={loadingAction === action.id}
-              className="border-white/20 text-white hover:bg-white/10 flex flex-col h-auto p-3"
+              className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white hover:border-white/40 flex flex-col h-auto p-4 transition-all duration-200 disabled:opacity-50"
             >
               {loadingAction === action.id ? (
-                <Loader2 className="w-4 h-4 mb-1 animate-spin" />
+                <Loader2 className="w-5 h-5 mb-2 animate-spin" />
               ) : (
-                <Icon className="w-4 h-4 mb-1" />
+                <Icon className="w-5 h-5 mb-2" />
               )}
-              <span className="text-xs">{action.label}</span>
+              <span className="text-xs font-medium">{action.label}</span>
             </Button>
           );
         })}
