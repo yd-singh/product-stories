@@ -14,6 +14,7 @@ export const getAudioUrl = async (articleId: string): Promise<string> => {
       .from('news-audio')
       .getPublicUrl(audioFilePath);
       
+    console.log("Generated public URL:", publicUrl.publicUrl);
     return publicUrl.publicUrl;
   } catch (error) {
     console.error("Error getting audio URL:", error);
@@ -29,16 +30,20 @@ export const getOrGenerateAudio = async (article: { id: string; headline: string
     
     // Test if the audio file actually exists by making a HEAD request
     try {
+      console.log("Testing if audio file exists at:", audioUrl);
       const response = await fetch(audioUrl, { method: 'HEAD' });
+      console.log("HEAD request response status:", response.status);
+      
       if (response.ok) {
         console.log("Audio file exists, using URL:", audioUrl);
         return audioUrl;
       }
     } catch (fetchError) {
-      console.log("Audio file not found, generating new audio...");
+      console.log("Audio file not found or error accessing it:", fetchError);
     }
     
     // If file doesn't exist, generate new audio
+    console.log("Generating new audio for article:", article.id);
     const { audioUrl: generatedUrl } = await generateAudio(`${article.headline}. ${article.aiSummary}`, article.id);
     return generatedUrl;
   } catch (error) {
@@ -55,12 +60,30 @@ export const playAudioFromUrl = async (audioUrl: string): Promise<HTMLAudioEleme
   
   return new Promise((resolve, reject) => {
     audio.addEventListener('canplaythrough', () => {
+      console.log("Audio can play through, starting playback");
       audio.play()
-        .then(() => resolve(audio))
-        .catch(reject);
+        .then(() => {
+          console.log("Audio playback started successfully");
+          resolve(audio);
+        })
+        .catch((playError) => {
+          console.error("Error starting audio playback:", playError);
+          reject(playError);
+        });
     });
     
-    audio.addEventListener('error', reject);
+    audio.addEventListener('error', (errorEvent) => {
+      console.error("Audio loading error:", errorEvent);
+      reject(new Error('Audio failed to load'));
+    });
+    
+    audio.addEventListener('loadstart', () => {
+      console.log("Audio loading started");
+    });
+    
+    audio.addEventListener('loadeddata', () => {
+      console.log("Audio data loaded");
+    });
     
     // Load the audio
     audio.load();

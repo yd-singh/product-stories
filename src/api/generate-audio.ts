@@ -24,7 +24,7 @@ export const generateAudio = async (text: string, articleId: string) => {
     const wavData = audioBufferToWav(audioBuffer);
     const audioBlob = new Blob([wavData], { type: 'audio/wav' });
     
-    // Upload to Supabase storage
+    // Upload to Supabase storage with correct file path (no leading slash, with extension)
     const filePath = `${articleId}.wav`;
     console.log(`Uploading audio file to news-audio bucket: ${filePath}`);
     
@@ -40,7 +40,7 @@ export const generateAudio = async (text: string, articleId: string) => {
       throw error;
     }
     
-    // Get public URL
+    // Get public URL with correct path
     const { data: publicUrlData } = supabase.storage
       .from('news-audio')
       .getPublicUrl(filePath);
