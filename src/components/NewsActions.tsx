@@ -74,12 +74,12 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
     setLoadingAction('play-audio');
     
     try {
-      const audioFilePath = `articles/${article.id}.mp3`;
+      const audioFilePath = `${article.id}.mp3`;
       
       // Check if audio file exists in Supabase storage
       const { data: existingAudio, error: fetchError } = await supabase
         .storage
-        .from('audio')
+        .from('news-audio')
         .download(audioFilePath);
       
       let audioUrl: string;
@@ -109,7 +109,7 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
         // Get public URL from stored file
         const { data: publicUrl } = supabase
           .storage
-          .from('audio')
+          .from('news-audio')
           .getPublicUrl(audioFilePath);
           
         audioUrl = publicUrl.publicUrl;

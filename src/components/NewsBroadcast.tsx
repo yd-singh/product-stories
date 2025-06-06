@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,17 +63,19 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
       }
       
       // Check if audio file already exists in Supabase storage
-      const audioFilePath = `articles/${article.id}.mp3`;
+      const audioFilePath = `${article.id}.mp3`;
+      
+      console.log("Checking for audio in bucket: news-audio, file:", audioFilePath);
       
       const { data: existingAudio, error: fetchError } = await supabase
         .storage
-        .from('audio')
+        .from('news-audio')
         .download(audioFilePath);
       
       let audioUrl: string;
       
       if (fetchError || !existingAudio) {
-        console.log("Audio file not found in storage, generating new audio...");
+        console.log("Audio file not found in storage, generating new audio...", fetchError);
         // Generate new audio if not found in storage
         const response = await fetch('/api/generate-audio', {
           method: 'POST',
@@ -98,13 +99,12 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
         // Create URL from the fetched blob
         const { data: publicUrl } = supabase
           .storage
-          .from('audio')
+          .from('news-audio')
           .getPublicUrl(audioFilePath);
           
         audioUrl = publicUrl.publicUrl;
+        console.log("Using audio URL:", audioUrl);
       }
-      
-      console.log("Playing audio from URL:", audioUrl);
       
       const newAudio = new Audio(audioUrl);
       
