@@ -1,4 +1,5 @@
 
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,12 +7,30 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNews } from "@/hooks/useNews";
 import NewsCard from "@/components/NewsCard";
+import NewsFilter from "@/components/NewsFilter";
+import NewsBroadcast from "@/components/NewsBroadcast";
 
 const News = () => {
   const { data: articles = [], isLoading, error } = useNews();
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [playingArticleId, setPlayingArticleId] = useState<string | null>(null);
 
-  const featuredArticle = articles[0];
-  const regularArticles = articles.slice(1);
+  // Get unique tags from articles
+  const availableTags = useMemo(() => {
+    const tags = articles.map(article => article.topic).filter(Boolean);
+    return Array.from(new Set(tags)).sort();
+  }, [articles]);
+
+  // Filter articles based on selected tags
+  const filteredArticles = useMemo(() => {
+    if (selectedTags.length === 0) {
+      return articles;
+    }
+    return articles.filter(article => selectedTags.includes(article.topic));
+  }, [articles, selectedTags]);
+
+  const featuredArticle = filteredArticles[0];
+  const regularArticles = filteredArticles.slice(1);
 
   if (isLoading) {
     return (
@@ -73,6 +92,29 @@ const News = () => {
             </Card>
           ) : (
             <>
+              {/* News Filter */}
+              <NewsFilter
+                availableTags={availableTags}
+                selectedTags={selectedTags}
+                onTagsChange={setSelectedTags}
+                onClearFilters={() => setSelectedTags([])}
+              />
+
+              {/* News Broadcast Player */}
+              {filteredArticles.length > 0 && (
+                <NewsBroadcast articles={filteredArticles} />
+              )}
+
+              {/* Results Summary */}
+              {selectedTags.length > 0 && (
+                <div className="flex items-center gap-4 text-white/70">
+                  <span>
+                    Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''} 
+                    {selectedTags.length > 0 && ` for: ${selectedTags.join(', ')}`}
+                  </span>
+                </div>
+              )}
+
               {/* Featured Article */}
               {featuredArticle && (
                 <div>
@@ -80,7 +122,11 @@ const News = () => {
                     Featured Article
                     <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">Latest</Badge>
                   </h2>
-                  <NewsCard article={featuredArticle} featured={true} />
+                  <NewsCard 
+                    article={featuredArticle} 
+                    featured={true}
+                    isPlaying={playingArticleId === featuredArticle.id}
+                  />
                 </div>
               )}
 
@@ -90,10 +136,32 @@ const News = () => {
                   <h2 className="text-2xl font-bold text-white mb-6">Recent Articles</h2>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {regularArticles.map((article) => (
-                      <NewsCard key={article.id} article={article} />
+                      <NewsCard 
+                        key={article.id} 
+                        article={article}
+                        isPlaying={playingArticleId === article.id}
+                      />
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* No Results */}
+              {filteredArticles.length === 0 && selectedTags.length > 0 && (
+                <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+                  <CardContent className="p-8 text-center">
+                    <p className="text-white/70 mb-4">
+                      No articles found for the selected topics: {selectedTags.join(', ')}
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedTags([])}
+                      className="border-white/20 text-white hover:bg-white/10"
+                    >
+                      Clear Filters
+                    </Button>
+                  </CardContent>
+                </Card>
               )}
             </>
           )}

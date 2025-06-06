@@ -1,16 +1,17 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, ExternalLink, User, Sparkles, Globe } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
+import NewsActions from "./NewsActions";
 
 interface NewsCardProps {
   article: NewsItem;
   featured?: boolean;
+  isPlaying?: boolean;
 }
 
-const NewsCard = ({ article, featured = false }: NewsCardProps) => {
+const NewsCard = ({ article, featured = false, isPlaying = false }: NewsCardProps) => {
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString();
@@ -50,7 +51,7 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
 
   if (featured) {
     return (
-      <Card className="bg-white/5 backdrop-blur-sm border-white/10 overflow-hidden group hover:border-white/20 transition-all duration-300">
+      <Card className={`bg-white/5 backdrop-blur-sm border-white/10 overflow-hidden group hover:border-white/20 transition-all duration-300 ${isPlaying ? 'ring-2 ring-purple-500/50 bg-purple-500/10' : ''}`}>
         <div className="md:flex">
           <div className="md:w-1/3 bg-gradient-to-br from-blue-600/20 to-purple-600/20 p-8 flex items-center justify-center">
             <div className="text-center">
@@ -86,8 +87,15 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
                   {getDomainFromUrl(article.newsUrl)}
                 </div>
               </div>
+              
+              {/* News Actions */}
+              <div className="mb-4">
+                <NewsActions article={article} />
+              </div>
+              
               <Button 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10"
                 onClick={() => window.open(article.newsUrl, '_blank')}
               >
                 Read Full Article
@@ -101,7 +109,7 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
   }
 
   return (
-    <Card className="bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 transition-all duration-300 group cursor-pointer h-full">
+    <Card className={`bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 transition-all duration-300 group cursor-pointer h-full ${isPlaying ? 'ring-2 ring-purple-500/50 bg-purple-500/10' : ''}`}>
       <CardHeader>
         <div className="flex items-start justify-between mb-2">
           <Badge className={getCategoryColor(article.topic)}>
@@ -137,6 +145,11 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
           <p className="text-white/70 text-sm line-clamp-2">
             {getPreviewContent()}
           </p>
+        </div>
+        
+        {/* Compact News Actions */}
+        <div className="mb-4">
+          <NewsActions article={article} compact={true} />
         </div>
         
         <Button 
