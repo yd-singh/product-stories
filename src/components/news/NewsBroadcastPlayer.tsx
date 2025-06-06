@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Play, Pause, SkipForward, SkipBack } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
 import { useToast } from "@/hooks/use-toast";
-import { getOrGenerateAudio, playAudioFromUrl } from "@/utils/audioUtils";
+import { getOrGenerateAudio } from "@/utils/audioUtils";
 
 interface NewsBroadcastPlayerProps {
   articles: NewsItem[];
@@ -24,7 +24,6 @@ const NewsBroadcastPlayer = ({
 }: NewsBroadcastPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -37,18 +36,15 @@ const NewsBroadcastPlayer = ({
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = '';
-      }
-      if (audio) {
-        audio.pause();
-        audio.src = '';
+        audioRef.current = null;
       }
     };
-  }, [audio]);
+  }, []);
 
   // Stop playing when articles change (filters applied)
   useEffect(() => {
-    if (audio) {
-      audio.pause();
+    if (audioRef.current) {
+      audioRef.current.pause();
       setIsPlaying(false);
     }
   }, [articles]);
@@ -66,20 +62,41 @@ const NewsBroadcastPlayer = ({
       setIsLoading(true);
       
       // Stop any existing audio
-      if (audio) {
-        audio.pause();
-        audio.src = '';
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
       }
       
       // Get or generate audio for this specific article
       const audioUrl = await getOrGenerateAudio(article);
       console.log("Got audio URL for broadcast:", audioUrl);
       
-      // Play the audio
-      const newAudio = await playAudioFromUrl(audioUrl);
+      // Create new audio element
+      const audio = new Audio();
+      audio.crossOrigin = "anonymous";
       
-      // Set up event listeners
-      newAudio.addEventListener('ended', () => {
+      // Set up event listeners before setting src
+      audio.addEventListener('canplaythrough', () => {
+        console.log("Audio can play through, starting playback");
+        audio.play()
+          .then(() => {
+            console.log("Audio playback started successfully");
+            setIsPlaying(true);
+            setIsLoading(false);
+          })
+          .catch((playError) => {
+            console.error("Error starting audio playback:", playError);
+            setIsPlaying(false);
+            setIsLoading(false);
+            toast({
+              title: "Audio Error",
+              description: "Failed to play audio for this article.",
+              variant: "destructive",
+            });
+          });
+      });
+      
+      audio.addEventListener('ended', () => {
         console.log("Audio ended, moving to next article");
         setIsPlaying(false);
         if (currentIndex < articles.length - 1) {
@@ -94,9 +111,16 @@ const NewsBroadcastPlayer = ({
         }
       });
 
-      newAudio.addEventListener('error', (e) => {
+      audio.addEventListener('error', (e) => {
         console.error("Audio playback error in broadcast:", e);
+        console.error("Audio error details:", {
+          error: audio.error,
+          networkState: audio.networkState,
+          readyState: audio.readyState,
+          src: audio.src
+        });
         setIsPlaying(false);
+        setIsLoading(false);
         toast({
           title: "Audio Error",
           description: "Failed to play audio for this article. Skipping to next.",
@@ -107,13 +131,30 @@ const NewsBroadcastPlayer = ({
         }
       });
 
-      setAudio(newAudio);
-      audioRef.current = newAudio;
-      setIsPlaying(true);
-      console.log("Audio playback started for broadcast");
+      audio.addEventListener('loadstart', () => {
+        console.log("Audio loading started");
+      });
+      
+      audio.addEventListener('loadeddata', () => {
+        console.log("Audio data loaded");
+      });
+
+      audio.addEventListener('loadedmetadata', () => {
+        console.log("Audio metadata loaded");
+      });
+
+      // Set the audio reference and source
+      audioRef.current = audio;
+      audio.src = audioUrl;
+      
+      // Load the audio
+      audio.load();
+      
+      console.log("Audio setup complete for broadcast");
     } catch (error) {
       console.error('Error playing audio in broadcast:', error);
       setIsPlaying(false);
+      setIsLoading(false);
       toast({
         title: "Error",
         description: "Failed to play audio. Skipping to next article.",
@@ -122,8 +163,6 @@ const NewsBroadcastPlayer = ({
       if (currentIndex < articles.length - 1) {
         onNext();
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -140,9 +179,9 @@ const NewsBroadcastPlayer = ({
       return;
     }
 
-    if (isPlaying && audio) {
+    if (isPlaying && audioRef.current) {
       console.log("Pausing audio");
-      audio.pause();
+      audioRef.current.pause();
       setIsPlaying(false);
     } else {
       console.log("Starting playback for article:", currentArticle.headline);
