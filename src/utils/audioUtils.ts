@@ -6,9 +6,9 @@ import { generateAudio } from "@/api/generate-audio";
 export const getAudioUrl = async (articleId: string): Promise<string> => {
   try {
     const audioFilePath = `${articleId}.wav`;
-    console.log("Checking for audio file:", audioFilePath);
+    console.log("Getting audio file URL:", audioFilePath);
     
-    // Try to get the audio file URL
+    // Get the public URL for the audio file
     const { data: publicUrl } = supabase
       .storage
       .from('news-audio')
@@ -24,45 +24,23 @@ export const getAudioUrl = async (articleId: string): Promise<string> => {
 // Function to get or generate audio for an article
 export const getOrGenerateAudio = async (article: { id: string; headline: string; aiSummary: string }): Promise<string> => {
   try {
-    // First try to get existing audio
+    // First try to get existing audio URL
     const audioUrl = await getAudioUrl(article.id);
     
-    // Test if the audio exists by creating a test element
-    return new Promise((resolve, reject) => {
-      const testAudio = new Audio(audioUrl);
-      
-      const onLoad = () => {
+    // Test if the audio file actually exists by making a HEAD request
+    try {
+      const response = await fetch(audioUrl, { method: 'HEAD' });
+      if (response.ok) {
         console.log("Audio file exists, using URL:", audioUrl);
-        testAudio.removeEventListener('loadeddata', onLoad);
-        testAudio.removeEventListener('error', onError);
-        resolve(audioUrl);
-      };
-      
-      const onError = async () => {
-        console.log("Audio file not found, generating new audio...");
-        testAudio.removeEventListener('loadeddata', onLoad);
-        testAudio.removeEventListener('error', onError);
-        
-        try {
-          const text = `${article.headline}. ${article.aiSummary}`;
-          const { audioUrl: generatedUrl } = await generateAudio(text, article.id);
-          resolve(generatedUrl);
-        } catch (err) {
-          console.error("Failed to generate audio:", err);
-          reject(err);
-        }
-      };
-      
-      testAudio.addEventListener('loadeddata', onLoad);
-      testAudio.addEventListener('error', onError);
-      
-      // Set a timeout in case neither event fires
-      setTimeout(() => {
-        testAudio.removeEventListener('loadeddata', onLoad);
-        testAudio.removeEventListener('error', onError);
-        onError();
-      }, 3000);
-    });
+        return audioUrl;
+      }
+    } catch (fetchError) {
+      console.log("Audio file not found, generating new audio...");
+    }
+    
+    // If file doesn't exist, generate new audio
+    const { audioUrl: generatedUrl } = await generateAudio(`${article.headline}. ${article.aiSummary}`, article.id);
+    return generatedUrl;
   } catch (error) {
     console.error("Error in getOrGenerateAudio:", error);
     throw error;
@@ -75,7 +53,16 @@ export const playAudioFromUrl = async (audioUrl: string): Promise<HTMLAudioEleme
   
   const audio = new Audio(audioUrl);
   
-  await audio.play();
-  
-  return audio;
+  return new Promise((resolve, reject) => {
+    audio.addEventListener('canplaythrough', () => {
+      audio.play()
+        .then(() => resolve(audio))
+        .catch(reject);
+    });
+    
+    audio.addEventListener('error', reject);
+    
+    // Load the audio
+    audio.load();
+  });
 };
