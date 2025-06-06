@@ -19,9 +19,9 @@ serve(async (req) => {
       throw new Error('SEATABLE_API_TOKEN not configured');
     }
 
-    console.log('Fetching news from Seatable...');
+    console.log('Fetching news from Seatable NewsCollections/Table1...');
     
-    // First, get access token
+    // First, get access token for the NewsCollections base
     const authResponse = await fetch('https://cloud.seatable.io/api/v2.1/dtable/app-access-token/', {
       method: 'GET',
       headers: {
@@ -38,10 +38,10 @@ serve(async (req) => {
     const accessToken = authData.access_token;
     const dtableUuid = authData.dtable_uuid;
     
-    console.log('Got access token, fetching news data...');
+    console.log('Got access token, fetching news data from Table1...');
 
-    // Now fetch the news data
-    const newsResponse = await fetch(`https://cloud.seatable.io/dtable-server/api/v1/dtables/${dtableUuid}/rows/`, {
+    // Now fetch the news data from Table1
+    const newsResponse = await fetch(`https://cloud.seatable.io/dtable-server/api/v1/dtables/${dtableUuid}/rows/?table_name=Table1`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     const newsData = await newsResponse.json();
-    console.log(`Fetched ${newsData.rows?.length || 0} news items`);
+    console.log(`Fetched ${newsData.rows?.length || 0} news items from Table1`);
 
     // Transform the data to match our expected format
     const transformedNews = newsData.rows?.map((row: any) => ({
