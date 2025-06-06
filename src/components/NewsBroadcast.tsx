@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,7 @@ import { Play, Pause, SkipForward, SkipBack, Radio } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generateAudio } from "@/api/generate-audio";
 
 interface NewsBroadcastProps {
   articles: NewsItem[];
@@ -17,14 +18,18 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentArticle = articles[currentIndex];
 
   useEffect(() => {
     return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       if (audio) {
         audio.pause();
-        audio.remove();
+        audio.src = '';
       }
     };
   }, [audio]);
@@ -59,52 +64,54 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
       
       if (audio) {
         audio.pause();
-        audio.remove();
       }
       
       // Check if audio file already exists in Supabase storage
-      const audioFilePath = `${article.id}.mp3`;
+      const audioFilePath = `${article.id}.wav`;
       
       console.log("Checking for audio in bucket: news-audio, file:", audioFilePath);
       
-      const { data: existingAudio, error: fetchError } = await supabase
-        .storage
-        .from('news-audio')
-        .download(audioFilePath);
-      
       let audioUrl: string;
       
-      if (fetchError || !existingAudio) {
-        console.log("Audio file not found in storage, generating new audio...", fetchError);
-        // Generate new audio if not found in storage
-        const response = await fetch('/api/generate-audio', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: `${article.headline}. ${article.aiSummary}`,
-            articleId: article.id,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate audio');
-        }
-
-        const { audioUrl: generatedUrl } = await response.json();
-        audioUrl = generatedUrl;
-      } else {
-        console.log("Audio file found in storage, using existing file");
-        // Create URL from the fetched blob
+      try {
+        // Try to get the audio file from storage
         const { data: publicUrl } = supabase
           .storage
           .from('news-audio')
           .getPublicUrl(audioFilePath);
           
-        audioUrl = publicUrl.publicUrl;
-        console.log("Using audio URL:", audioUrl);
+        // Try to play the file to see if it exists
+        const tempAudio = new Audio(publicUrl.publicUrl);
+        
+        // Set up a promise to check if the file loads or errors
+        const checkAudio = new Promise((resolve, reject) => {
+          tempAudio.onloadeddata = () => resolve(true);
+          tempAudio.onerror = () => reject(new Error("Audio file not found or invalid"));
+        });
+        
+        // Wait for 2 seconds max to see if the audio loads
+        const fileExists = await Promise.race([
+          checkAudio,
+          new Promise((resolve) => setTimeout(() => resolve(false), 2000))
+        ]);
+        
+        if (fileExists) {
+          console.log("Audio file found in storage, using existing file");
+          audioUrl = publicUrl.publicUrl;
+        } else {
+          throw new Error("Audio file not available");
+        }
+      } catch (error) {
+        console.log("Audio file not found in storage, generating new audio...");
+        // Generate new audio
+        const { audioUrl: generatedUrl } = await generateAudio(
+          `${article.headline}. ${article.aiSummary}`,
+          article.id
+        );
+        audioUrl = generatedUrl;
       }
+      
+      console.log("Playing audio from URL:", audioUrl);
       
       const newAudio = new Audio(audioUrl);
       
@@ -120,6 +127,7 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
       });
 
       setAudio(newAudio);
+      audioRef.current = newAudio;
       await newAudio.play();
       setIsPlaying(true);
     } catch (error) {

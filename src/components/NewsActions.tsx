@@ -6,6 +6,7 @@ import { Loader2, Play, Search, BookOpen, MessageSquare, CheckCircle, Mic, MoreH
 import { NewsItem } from "@/hooks/useNews";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generateAudio } from "@/api/generate-audio";
 
 interface NewsActionsProps {
   article: NewsItem;
@@ -74,51 +75,66 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
     setLoadingAction('play-audio');
     
     try {
-      const audioFilePath = `${article.id}.mp3`;
-      
       // Check if audio file exists in Supabase storage
-      const { data: existingAudio, error: fetchError } = await supabase
-        .storage
-        .from('news-audio')
-        .download(audioFilePath);
+      const audioFilePath = `${article.id}.wav`;
+      
+      console.log("Checking for audio in Supabase storage:", audioFilePath);
       
       let audioUrl: string;
       
-      if (fetchError || !existingAudio) {
-        console.log("Audio file not found in storage, generating new audio...");
-        // Generate new audio if not found in storage
-        const response = await fetch('/api/generate-audio', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: `${article.headline}. ${article.aiSummary}`,
-            articleId: article.id,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate audio');
-        }
-
-        const { audioUrl: generatedUrl } = await response.json();
-        audioUrl = generatedUrl;
-      } else {
-        console.log("Audio file found in storage, using existing file");
-        // Get public URL from stored file
+      try {
+        // Try to get the audio file URL
         const { data: publicUrl } = supabase
           .storage
           .from('news-audio')
           .getPublicUrl(audioFilePath);
           
-        audioUrl = publicUrl.publicUrl;
+        // Create a test audio element to see if the file exists and is accessible
+        const testAudio = new Audio(publicUrl.publicUrl);
+        
+        // Set up a promise to check if the file loads or errors
+        const checkAudio = new Promise((resolve, reject) => {
+          testAudio.onloadeddata = () => resolve(true);
+          testAudio.onerror = () => reject(new Error("Audio file not found or invalid"));
+        });
+        
+        // Wait for 2 seconds max to see if the audio loads
+        const fileExists = await Promise.race([
+          checkAudio,
+          new Promise((resolve) => setTimeout(() => resolve(false), 2000))
+        ]);
+        
+        if (fileExists) {
+          console.log("Audio file found in storage, using existing file");
+          audioUrl = publicUrl.publicUrl;
+        } else {
+          throw new Error("Audio file test failed");
+        }
+      } catch (error) {
+        console.log("Audio file not found or invalid, generating new audio...");
+        // Generate new audio if not found or invalid
+        const { audioUrl: generatedUrl } = await generateAudio(
+          `${article.headline}. ${article.aiSummary}`,
+          article.id
+        );
+        audioUrl = generatedUrl;
       }
       
       console.log("Playing audio from URL:", audioUrl);
       
       // Create and play audio element
       const audio = new Audio(audioUrl);
+      
+      // Add event listeners for completion and errors
+      audio.addEventListener('ended', () => {
+        console.log("Audio playback completed");
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error("Error during audio playback:", e);
+        throw new Error("Failed to play audio file");
+      });
+      
       await audio.play();
       
       toast({
