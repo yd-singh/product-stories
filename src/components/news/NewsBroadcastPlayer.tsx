@@ -28,12 +28,15 @@ const NewsBroadcastPlayer = ({
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Get the current article from the filtered articles array
   const currentArticle = articles[currentIndex];
 
+  // Clean up audio when component unmounts or articles change
   useEffect(() => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = '';
       }
       if (audio) {
         audio.pause();
@@ -42,57 +45,119 @@ const NewsBroadcastPlayer = ({
     };
   }, [audio]);
 
+  // Stop playing when articles change (filters applied)
+  useEffect(() => {
+    if (audio) {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  }, [articles]);
+
+  // Reset to first article when articles change
+  useEffect(() => {
+    if (currentIndex >= articles.length && articles.length > 0) {
+      onIndexChange(0);
+    }
+  }, [articles, currentIndex, onIndexChange]);
+
   const playAudio = async (article: NewsItem) => {
     try {
+      console.log("Playing audio for article in broadcast:", article.id, article.headline);
       setIsLoading(true);
       
+      // Stop any existing audio
       if (audio) {
         audio.pause();
+        audio.src = '';
       }
       
-      // Get or generate audio for this article
+      // Get or generate audio for this specific article
       const audioUrl = await getOrGenerateAudio(article);
+      console.log("Got audio URL for broadcast:", audioUrl);
       
       // Play the audio
       const newAudio = await playAudioFromUrl(audioUrl);
       
-      newAudio.addEventListener('ended', onNext);
+      // Set up event listeners
+      newAudio.addEventListener('ended', () => {
+        console.log("Audio ended, moving to next article");
+        setIsPlaying(false);
+        if (currentIndex < articles.length - 1) {
+          onNext();
+          // Auto-play next article after a short delay
+          setTimeout(() => {
+            const nextArticle = articles[currentIndex + 1];
+            if (nextArticle) {
+              playAudio(nextArticle);
+            }
+          }, 500);
+        }
+      });
+
       newAudio.addEventListener('error', (e) => {
-        console.error("Audio playback error:", e);
+        console.error("Audio playback error in broadcast:", e);
+        setIsPlaying(false);
         toast({
           title: "Audio Error",
-          description: "Failed to play audio for this article.",
+          description: "Failed to play audio for this article. Skipping to next.",
           variant: "destructive",
         });
-        onNext();
+        if (currentIndex < articles.length - 1) {
+          onNext();
+        }
       });
 
       setAudio(newAudio);
       audioRef.current = newAudio;
       setIsPlaying(true);
+      console.log("Audio playback started for broadcast");
     } catch (error) {
-      console.error('Error playing audio:', error);
+      console.error('Error playing audio in broadcast:', error);
+      setIsPlaying(false);
       toast({
         title: "Error",
         description: "Failed to play audio. Skipping to next article.",
         variant: "destructive",
       });
-      onNext();
+      if (currentIndex < articles.length - 1) {
+        onNext();
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const togglePlayback = () => {
-    if (isPlaying) {
-      if (audio) {
-        audio.pause();
-      }
+    console.log("Toggle playback clicked. Current state:", { isPlaying, currentArticle: currentArticle?.id });
+    
+    if (!currentArticle) {
+      console.error("No current article available");
+      toast({
+        title: "Error",
+        description: "No article available to play.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isPlaying && audio) {
+      console.log("Pausing audio");
+      audio.pause();
       setIsPlaying(false);
     } else {
+      console.log("Starting playback for article:", currentArticle.headline);
       playAudio(currentArticle);
     }
   };
+
+  // Don't render if no articles available
+  if (!articles.length || !currentArticle) {
+    return (
+      <div className="flex items-center justify-center gap-4 text-cred-gray-500">
+        <span>No articles available for broadcast</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center gap-4">
@@ -108,7 +173,7 @@ const NewsBroadcastPlayer = ({
       
       <Button
         onClick={togglePlayback}
-        disabled={isLoading}
+        disabled={isLoading || !currentArticle}
         className="bg-cred-teal text-cred-black hover:bg-cred-teal/90 font-bold px-8 py-3 h-12 shadow-lg"
       >
         {isLoading ? (
