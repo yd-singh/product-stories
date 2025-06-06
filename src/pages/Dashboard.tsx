@@ -3,8 +3,12 @@ import { Link } from "react-router-dom";
 import { User, Newspaper, Crown, ArrowRight, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AuthButton } from "@/components/AuthButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  
   const apps = [
     {
       id: "about",
@@ -41,18 +45,23 @@ const Dashboard = () => {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20" />
         <div className="relative container mx-auto px-6 py-16">
-          <div className="text-center space-y-6">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-white/80 text-sm">
-              <Sparkles className="w-4 h-4" />
-              Personal Dashboard
+          <div className="flex justify-between items-start mb-8">
+            <div className="text-left">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 text-white/80 text-sm mb-4">
+                <Sparkles className="w-4 h-4" />
+                Personal Dashboard
+              </div>
+              <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+                Welcome Back,
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  {user?.email?.split('@')[0] || 'User'}
+                </span>
+              </h1>
+              <p className="text-xl text-white/70 max-w-2xl">
+                Explore my collection of tools, projects, and content. Each app is designed to showcase different aspects of my work and interests.
+              </p>
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-white">
-              Welcome to My
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"> Digital Hub</span>
-            </h1>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
-              Explore my collection of tools, projects, and content. Each app is designed to showcase different aspects of my work and interests.
-            </p>
+            <AuthButton />
           </div>
         </div>
       </div>
