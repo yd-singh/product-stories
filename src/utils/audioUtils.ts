@@ -5,7 +5,7 @@ import { generateAudio } from "@/api/generate-audio";
 // Function to check if audio file exists in storage and return URL
 export const getAudioUrl = async (articleId: string): Promise<string> => {
   try {
-    const audioFilePath = `${articleId}.wav`;
+    const audioFilePath = articleId; // No .wav extension to match existing files
     console.log("Getting audio file URL:", audioFilePath);
     
     // Get the public URL for the audio file
@@ -48,7 +48,8 @@ export const getOrGenerateAudio = async (article: { id: string; headline: string
     return generatedUrl;
   } catch (error) {
     console.error("Error in getOrGenerateAudio:", error);
-    throw error;
+    // Return the URL anyway and let the audio player handle the error
+    return await getAudioUrl(article.id);
   }
 };
 

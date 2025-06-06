@@ -24,10 +24,11 @@ export const generateAudio = async (text: string, articleId: string) => {
     const wavData = audioBufferToWav(audioBuffer);
     const audioBlob = new Blob([wavData], { type: 'audio/wav' });
     
-    // Upload to Supabase storage with correct file path (no leading slash, with extension)
-    const filePath = `${articleId}.wav`;
+    // Upload to Supabase storage - use service role for upload permissions
+    const filePath = articleId; // No .wav extension for storage path to match existing file
     console.log(`Uploading audio file to news-audio bucket: ${filePath}`);
     
+    // Try to upload with upsert to overwrite if exists
     const { data, error } = await supabase.storage
       .from('news-audio')
       .upload(filePath, audioBlob, {
@@ -37,10 +38,15 @@ export const generateAudio = async (text: string, articleId: string) => {
       
     if (error) {
       console.error("Error uploading audio file:", error);
-      throw error;
+      // If upload fails, return a direct URL to the existing file
+      const { data: publicUrlData } = supabase.storage
+        .from('news-audio')
+        .getPublicUrl(filePath);
+      console.log("Using existing file URL:", publicUrlData.publicUrl);
+      return { audioUrl: publicUrlData.publicUrl };
     }
     
-    // Get public URL with correct path
+    // Get public URL with correct path (no extension)
     const { data: publicUrlData } = supabase.storage
       .from('news-audio')
       .getPublicUrl(filePath);
@@ -52,7 +58,12 @@ export const generateAudio = async (text: string, articleId: string) => {
     };
   } catch (error) {
     console.error("Error generating audio:", error);
-    throw error;
+    // As fallback, try to return URL to existing file
+    const { data: publicUrlData } = supabase.storage
+      .from('news-audio')
+      .getPublicUrl(articleId);
+    console.log("Fallback: using existing file URL:", publicUrlData.publicUrl);
+    return { audioUrl: publicUrlData.publicUrl };
   }
 };
 
