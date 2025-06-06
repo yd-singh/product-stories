@@ -18,6 +18,8 @@ const Dashboard = () => {
       path: "/about",
       gradient: "from-blue-500 to-purple-600",
       color: "text-blue-500",
+      disabled: true,
+      comingSoon: true,
     },
     {
       id: "news",
@@ -27,15 +29,19 @@ const Dashboard = () => {
       path: "/news",
       gradient: "from-green-500 to-teal-600",
       color: "text-green-500",
+      disabled: false,
+      comingSoon: false,
     },
     {
       id: "alfred-singh",
       title: "Alfred Singh",
-      description: "Dedicated space for Alfred Singh related content",
+      description: "My personal assistant",
       icon: Crown,
       path: "/alfred-singh",
       gradient: "from-orange-500 to-red-600",
       color: "text-orange-500",
+      disabled: true,
+      comingSoon: true,
     },
   ];
 
@@ -71,25 +77,43 @@ const Dashboard = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {apps.map((app) => {
             const IconComponent = app.icon;
+            const isDisabled = app.disabled || app.comingSoon;
+            
             return (
-              <Card key={app.id} className="group relative overflow-hidden bg-white/5 backdrop-blur-sm border-white/10 hover:border-white/20 transition-all duration-300 hover:scale-105">
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-gradient-to-br ${app.gradient}`} />
+              <Card key={app.id} className={`group relative overflow-hidden bg-white/5 backdrop-blur-sm border-white/10 transition-all duration-300 ${!isDisabled ? 'hover:border-white/20 hover:scale-105' : 'opacity-60'}`}>
+                <div className={`absolute inset-0 opacity-0 transition-opacity duration-300 bg-gradient-to-br ${app.gradient} ${!isDisabled ? 'group-hover:opacity-20' : ''}`} />
                 <CardHeader className="relative">
                   <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${app.gradient} flex items-center justify-center mb-4`}>
                     <IconComponent className="w-6 h-6 text-white" />
                   </div>
-                  <CardTitle className="text-white text-xl">{app.title}</CardTitle>
+                  <CardTitle className="text-white text-xl flex items-center gap-2">
+                    {app.title}
+                    {app.comingSoon && (
+                      <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                        Coming Soon
+                      </span>
+                    )}
+                  </CardTitle>
                   <CardDescription className="text-white/60">
                     {app.description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="relative">
-                  <Button asChild className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20 group">
-                    <Link to={app.path} className="flex items-center justify-center gap-2">
-                      Open App
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  </Button>
+                  {isDisabled ? (
+                    <Button 
+                      disabled 
+                      className="w-full bg-white/5 text-white/50 border-white/10 cursor-not-allowed"
+                    >
+                      Coming Soon
+                    </Button>
+                  ) : (
+                    <Button asChild className="w-full bg-white/10 hover:bg-white/20 text-white border-white/20 group">
+                      <Link to={app.path} className="flex items-center justify-center gap-2">
+                        Open App
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );

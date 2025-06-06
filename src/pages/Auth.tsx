@@ -8,10 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Linkedin, ExternalLink } from 'lucide-react';
+import { Eye, EyeOff, Linkedin, ExternalLink, Mail } from 'lucide-react';
 
 const Auth = () => {
-  const { user, signIn, signUp } = useAuth();
+  const { user, signIn } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -19,9 +19,8 @@ const Auth = () => {
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupFullName, setSignupFullName] = useState('');
+  const [waitlistEmail, setWaitlistEmail] = useState('');
+  const [waitlistName, setWaitlistName] = useState('');
 
   // If user is already logged in, redirect to dashboard
   if (user) {
@@ -57,41 +56,28 @@ const Auth = () => {
     setLoading(false);
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleWaitlistRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupEmail || !signupPassword) {
+    if (!waitlistEmail) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (signupPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
+        description: "Please enter your email address",
         variant: "destructive"
       });
       return;
     }
 
     setLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupFullName);
     
-    if (error) {
-      toast({
-        title: "Signup Failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Account created successfully! Please check your email to verify your account.",
-      });
-    }
+    // For now, just show a success message
+    // In a real implementation, you'd send this to a backend service
+    toast({
+      title: "Request Submitted!",
+      description: "Your access request has been submitted. You'll hear back from Yash soon.",
+    });
+    
+    setWaitlistEmail('');
+    setWaitlistName('');
     setLoading(false);
   };
 
@@ -127,9 +113,9 @@ const Auth = () => {
           {/* Access Message */}
           <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-4 animate-fade-in" style={{ animationDelay: '0.9s' }}>
             <p className="text-white/70 text-sm leading-relaxed">
-              To get access to Product Stories, please reach out to Yash via LinkedIn. 
+              Product Stories is an invite-only platform for product enthusiasts and storytellers.
               <span className="block mt-1 text-white/50 text-xs">
-                Exclusive access for product enthusiasts and storytellers.
+                Request access below or connect with Yash on LinkedIn.
               </span>
             </p>
           </div>
@@ -138,19 +124,19 @@ const Auth = () => {
         {/* Auth Card */}
         <Card className="bg-white/10 backdrop-blur-sm border-white/20 animate-fade-in" style={{ animationDelay: '1.2s' }}>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl text-white">Welcome</CardTitle>
+            <CardTitle className="text-2xl text-white">Access Portal</CardTitle>
             <CardDescription className="text-white/70">
-              Sign in to your account or create a new one
+              Sign in with your invitation or request access
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-white/5">
                 <TabsTrigger value="login" className="text-white data-[state=active]:bg-white/20">
-                  Login
+                  Sign In
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="text-white data-[state=active]:bg-white/20">
-                  Sign Up
+                <TabsTrigger value="request" className="text-white data-[state=active]:bg-white/20">
+                  Request Access
                 </TabsTrigger>
               </TabsList>
               
@@ -164,7 +150,7 @@ const Auth = () => {
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                      placeholder="Enter your email"
+                      placeholder="Enter your invited email"
                       required
                     />
                   </div>
@@ -205,65 +191,43 @@ const Auth = () => {
                 </form>
               </TabsContent>
               
-              <TabsContent value="signup" className="space-y-4">
-                <form onSubmit={handleSignup} className="space-y-4">
+              <TabsContent value="request" className="space-y-4">
+                <form onSubmit={handleWaitlistRequest} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name" className="text-white">Full Name (Optional)</Label>
+                    <Label htmlFor="waitlist-name" className="text-white">Full Name (Optional)</Label>
                     <Input
-                      id="signup-name"
+                      id="waitlist-name"
                       type="text"
-                      value={signupFullName}
-                      onChange={(e) => setSignupFullName(e.target.value)}
+                      value={waitlistName}
+                      onChange={(e) => setWaitlistName(e.target.value)}
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       placeholder="Enter your full name"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email" className="text-white">Email</Label>
+                    <Label htmlFor="waitlist-email" className="text-white">Email</Label>
                     <Input
-                      id="signup-email"
+                      id="waitlist-email"
                       type="email"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                      placeholder="Enter your email"
+                      placeholder="Enter your email address"
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password" className="text-white">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="signup-password"
-                        type={showPassword ? "text" : "password"}
-                        value={signupPassword}
-                        onChange={(e) => setSignupPassword(e.target.value)}
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 pr-10"
-                        placeholder="Enter your password (min 6 chars)"
-                        required
-                        minLength={6}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-white/50" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-white/50" />
-                        )}
-                      </Button>
-                    </div>
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-sm">
+                      By requesting access, you'll be added to our waitlist. Yash will review your request and send you an invitation if accepted.
+                    </p>
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
                     disabled={loading}
                   >
-                    {loading ? "Creating account..." : "Create Account"}
+                    <Mail className="w-4 h-4 mr-2" />
+                    {loading ? "Submitting..." : "Request Access"}
                   </Button>
                 </form>
               </TabsContent>
