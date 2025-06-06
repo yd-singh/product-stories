@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -55,10 +54,10 @@ const News = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-400 mx-auto mb-4" />
-          <p className="text-white/70">Loading news...</p>
+      <div className="min-h-screen bg-cred-black flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-cred-teal border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-cred-gray-300 font-medium">Loading news...</p>
         </div>
       </div>
     );
@@ -66,10 +65,11 @@ const News = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">Error loading news: {error.message}</p>
-          <Button asChild variant="ghost" className="text-white hover:bg-white/10">
+      <div className="min-h-screen bg-cred-black flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <p className="text-red-400 text-lg font-medium">Error loading news</p>
+          <p className="text-cred-gray-400 text-sm">{error.message}</p>
+          <Button asChild variant="outline" className="border-cred-gray-700 text-cred-gray-100 hover:bg-cred-surface">
             <Link to="/">Back to Dashboard</Link>
           </Button>
         </div>
@@ -78,137 +78,127 @@ const News = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-cred-black">
       {/* Header */}
-      <div className="container mx-auto px-6 py-8">
-        <Button asChild variant="ghost" className="text-white hover:bg-white/10">
-          <Link to="/" className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
-          </Link>
-        </Button>
+      <div className="border-b border-cred-gray-800">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <Button asChild variant="ghost" className="text-cred-gray-300 hover:text-cred-gray-100 hover:bg-cred-surface -ml-3">
+            <Link to="/" className="flex items-center gap-3">
+              <ArrowLeft className="w-4 h-4" />
+              <span className="font-medium">Back</span>
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Page Title */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold text-white">
-            News & 
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"> Updates</span>
+      {/* Hero Section */}
+      <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="max-w-3xl">
+          <h1 className="text-5xl lg:text-6xl font-bold text-cred-gray-100 mb-6 leading-tight">
+            News &{' '}
+            <span className="text-cred-teal">Intelligence</span>
           </h1>
-          <p className="text-xl text-white/70 max-w-2xl mx-auto">
-            Stay updated with the latest news from my Seatable database with AI-generated summaries.
+          <p className="text-xl text-cred-gray-300 leading-relaxed">
+            AI-curated news with intelligent summaries and insights. 
+            Stay informed with precision.
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-6 py-8">
-        <div className="max-w-6xl mx-auto space-y-12">
-          {articles.length === 0 ? (
-            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-              <CardContent className="p-8 text-center">
-                <p className="text-white/70">No news articles found.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* News Filter */}
-              <NewsFilter
-                availableTags={availableTags}
-                selectedTags={selectedTags}
-                onTagsChange={setSelectedTags}
-                selectedDate={selectedDate}
-                onDateChange={setSelectedDate}
-                onClearFilters={handleClearFilters}
-              />
-
-              {/* News Broadcast Player */}
-              {filteredArticles.length > 0 && (
-                <NewsBroadcast articles={filteredArticles} />
-              )}
-
-              {/* Results Summary */}
-              {(selectedTags.length > 0 || selectedDate) && (
-                <div className="flex items-center gap-4 text-white/70">
-                  <span>
-                    Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''} 
-                    {(selectedTags.length > 0 || selectedDate) && ' with applied filters'}
-                  </span>
-                </div>
-              )}
-
-              {/* Featured Article */}
-              {featuredArticle && (
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                    Featured Article
-                    <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">Latest</Badge>
-                  </h2>
-                  <NewsCard 
-                    article={featuredArticle} 
-                    featured={true}
-                    isPlaying={playingArticleId === featuredArticle.id}
-                  />
-                </div>
-              )}
-
-              {/* Recent Articles */}
-              {regularArticles.length > 0 && (
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-6">Recent Articles</h2>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {regularArticles.map((article) => (
-                      <NewsCard 
-                        key={article.id} 
-                        article={article}
-                        isPlaying={playingArticleId === article.id}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* No Results */}
-              {filteredArticles.length === 0 && (selectedTags.length > 0 || selectedDate) && (
-                <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-                  <CardContent className="p-8 text-center">
-                    <p className="text-white/70 mb-4">
-                      No articles found for the selected filters.
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleClearFilters}
-                      className="border-white/20 text-white hover:bg-white/10"
-                    >
-                      Clear Filters
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-
-          {/* Newsletter Signup */}
-          <Card className="bg-gradient-to-r from-blue-600/10 to-purple-600/10 backdrop-blur-sm border-white/10">
-            <CardContent className="p-8 text-center">
-              <h3 className="text-2xl font-bold text-white mb-4">Stay Updated</h3>
-              <p className="text-white/70 mb-6 max-w-md mx-auto">
-                Subscribe to get notified about new articles and project updates directly in your inbox.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-white/40"
-                />
-                <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
-                  Subscribe
-                </Button>
-              </div>
+      <div className="max-w-7xl mx-auto px-6 pb-24">
+        {articles.length === 0 ? (
+          <Card className="cred-surface border-cred-gray-800">
+            <CardContent className="p-12 text-center">
+              <p className="text-cred-gray-400 text-lg">No news articles available</p>
             </CardContent>
           </Card>
-        </div>
+        ) : (
+          <div className="space-y-12">
+            {/* News Filter */}
+            <NewsFilter
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
+              onClearFilters={handleClearFilters}
+            />
+
+            {/* News Broadcast Player */}
+            {filteredArticles.length > 0 && (
+              <NewsBroadcast articles={filteredArticles} />
+            )}
+
+            {/* Results Summary */}
+            {(selectedTags.length > 0 || selectedDate) && (
+              <div className="flex items-center justify-between py-4">
+                <span className="text-cred-gray-400 font-medium">
+                  {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''} found
+                </span>
+                {(selectedTags.length > 0 || selectedDate) && (
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleClearFilters}
+                    className="text-cred-gray-400 hover:text-cred-gray-200 hover:bg-cred-surface"
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Featured Article */}
+            {featuredArticle && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-cred-gray-100">Featured</h2>
+                  <Badge className="bg-cred-teal/10 text-cred-teal border-cred-teal/20 font-medium">
+                    Latest
+                  </Badge>
+                </div>
+                <NewsCard 
+                  article={featuredArticle} 
+                  featured={true}
+                  isPlaying={playingArticleId === featuredArticle.id}
+                />
+              </div>
+            )}
+
+            {/* Recent Articles */}
+            {regularArticles.length > 0 && (
+              <div className="space-y-8">
+                <h2 className="text-2xl font-bold text-cred-gray-100">Recent Articles</h2>
+                <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {regularArticles.map((article) => (
+                    <NewsCard 
+                      key={article.id} 
+                      article={article}
+                      isPlaying={playingArticleId === article.id}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No Results */}
+            {filteredArticles.length === 0 && (selectedTags.length > 0 || selectedDate) && (
+              <Card className="cred-surface border-cred-gray-800">
+                <CardContent className="p-12 text-center space-y-6">
+                  <p className="text-cred-gray-400 text-lg">
+                    No articles match your filters
+                  </p>
+                  <Button 
+                    onClick={handleClearFilters}
+                    className="bg-cred-teal text-cred-black hover:bg-cred-teal/90 font-medium"
+                  >
+                    Clear Filters
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

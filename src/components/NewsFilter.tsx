@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { X, CalendarIcon } from "lucide-react";
+import { X, CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
 
 interface NewsFilterProps {
@@ -31,7 +31,7 @@ const NewsFilter = ({
     if (!selectedTags.includes(tag)) {
       onTagsChange([...selectedTags, tag]);
     }
-    setTagSelectValue(""); // Reset the select value
+    setTagSelectValue("");
   };
 
   const handleTagRemove = (tag: string) => {
@@ -41,82 +41,90 @@ const NewsFilter = ({
   const hasActiveFilters = selectedTags.length > 0 || selectedDate;
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg p-6 mb-8">
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Topic Filter */}
-          <div>
-            <label className="text-white/80 text-sm mb-2 block font-medium">Filter by Topic:</label>
-            <Select value={tagSelectValue} onValueChange={handleTagSelect}>
-              <SelectTrigger className="bg-white/10 border-white/30 text-white hover:bg-white/15 focus:bg-white/15 focus:border-white/40">
-                <SelectValue placeholder="Select a topic to filter" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800/95 backdrop-blur-sm border-white/20 z-50">
-                {availableTags.map((tag) => (
-                  <SelectItem 
-                    key={tag} 
-                    value={tag} 
-                    disabled={selectedTags.includes(tag)}
-                    className="text-white hover:bg-white/20 focus:bg-white/20 disabled:opacity-50"
-                  >
-                    {tag}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date Filter */}
-          <div>
-            <label className="text-white/80 text-sm mb-2 block font-medium">Filter by Date:</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full bg-white/10 border-white/30 text-white hover:bg-white/15 focus:bg-white/15 focus:border-white/40 justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-slate-800/95 backdrop-blur-sm border-white/20 z-50" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={onDateChange}
-                  initialFocus
-                  className="text-white"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+    <div className="space-y-6">
+      {/* Filter Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-cred-gray-400" />
+          <span className="text-sm font-medium text-cred-gray-400 uppercase tracking-wider">Filters</span>
         </div>
-        
         {hasActiveFilters && (
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={onClearFilters}
-            className="text-white/70 hover:text-white hover:bg-white/15 transition-colors whitespace-nowrap"
+            className="text-cred-gray-500 hover:text-cred-gray-300 hover:bg-cred-surface text-xs font-medium"
           >
-            Clear All Filters
+            Clear All
           </Button>
         )}
       </div>
+
+      {/* Filter Controls */}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Topic Filter */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-cred-gray-300">Topic</label>
+          <Select value={tagSelectValue} onValueChange={handleTagSelect}>
+            <SelectTrigger className="cred-surface-elevated border-cred-gray-700 text-cred-gray-100 hover:border-cred-gray-600 focus:border-cred-teal h-12">
+              <SelectValue placeholder="Select topic" />
+            </SelectTrigger>
+            <SelectContent className="bg-cred-surface border-cred-gray-700 z-50">
+              {availableTags.map((tag) => (
+                <SelectItem 
+                  key={tag} 
+                  value={tag} 
+                  disabled={selectedTags.includes(tag)}
+                  className="text-cred-gray-100 hover:bg-cred-gray-800 focus:bg-cred-gray-800 disabled:opacity-40"
+                >
+                  {tag}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Date Filter */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-cred-gray-300">Date</label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full cred-surface-elevated border-cred-gray-700 text-cred-gray-100 hover:border-cred-gray-600 focus:border-cred-teal justify-start text-left font-normal h-12"
+              >
+                <CalendarIcon className="mr-3 h-4 w-4 text-cred-gray-400" />
+                {selectedDate ? format(selectedDate, "MMM dd, yyyy") : "Select date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-cred-surface border-cred-gray-700 z-50" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={onDateChange}
+                initialFocus
+                className="text-cred-gray-100"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
       
+      {/* Active Filters */}
       {(selectedTags.length > 0 || selectedDate) && (
-        <div className="mt-4">
+        <div className="space-y-3">
+          <span className="text-xs font-medium text-cred-gray-500 uppercase tracking-wider">Active Filters</span>
           <div className="flex flex-wrap gap-2">
             {selectedTags.map((tag) => (
               <Badge
                 key={tag}
-                className="bg-blue-500/20 text-blue-300 border border-blue-500/40 pr-1 hover:bg-blue-500/30 transition-colors"
+                className="bg-cred-teal/10 text-cred-teal border border-cred-teal/20 pr-1 hover:bg-cred-teal/20 transition-colors font-medium"
               >
                 {tag}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-auto p-0 ml-1 text-blue-300 hover:text-blue-200 hover:bg-transparent"
+                  className="h-auto p-0 ml-2 text-cred-teal hover:text-cred-teal/70 hover:bg-transparent"
                   onClick={() => handleTagRemove(tag)}
                 >
                   <X className="w-3 h-3" />
@@ -125,13 +133,13 @@ const NewsFilter = ({
             ))}
             {selectedDate && (
               <Badge
-                className="bg-purple-500/20 text-purple-300 border border-purple-500/40 pr-1 hover:bg-purple-500/30 transition-colors"
+                className="bg-cred-purple/10 text-cred-purple border border-cred-purple/20 pr-1 hover:bg-cred-purple/20 transition-colors font-medium"
               >
                 {format(selectedDate, "MMM dd, yyyy")}
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-auto p-0 ml-1 text-purple-300 hover:text-purple-200 hover:bg-transparent"
+                  className="h-auto p-0 ml-2 text-cred-purple hover:text-cred-purple/70 hover:bg-transparent"
                   onClick={() => onDateChange(undefined)}
                 >
                   <X className="w-3 h-3" />

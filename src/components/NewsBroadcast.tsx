@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Pause, SkipForward, SkipBack, Volume2 } from "lucide-react";
+import { Play, Pause, SkipForward, SkipBack, Radio } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
 import { useToast } from "@/hooks/use-toast";
 
@@ -117,32 +118,36 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
   }
 
   return (
-    <Card className="bg-gradient-to-r from-purple-600/10 to-blue-600/10 backdrop-blur-sm border border-white/10 mb-8">
-      <CardHeader>
-        <CardTitle className="text-white flex items-center gap-3">
-          <Volume2 className="w-6 h-6" />
-          News Broadcast
-          <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white border-none shadow-lg font-bold px-3 py-1 text-xs uppercase tracking-wider">
+    <Card className="cred-surface-elevated border-cred-gray-700 overflow-hidden">
+      <CardHeader className="border-b border-cred-gray-800">
+        <CardTitle className="text-cred-gray-100 flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-cred-teal/10 rounded-lg">
+              <Radio className="w-5 h-5 text-cred-teal" />
+            </div>
+            <span className="text-xl font-bold">News Broadcast</span>
+          </div>
+          <Badge className="bg-red-500 text-white border-none shadow-lg font-bold px-3 py-1.5 text-xs uppercase tracking-wider animate-pulse">
             ● LIVE
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
+      <CardContent className="p-8">
+        <div className="space-y-8">
           {/* Current Article Display */}
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="flex items-start justify-between mb-3">
-              <Badge className="bg-blue-500/20 text-blue-300 border border-blue-500/40">
+          <div className="cred-surface border border-cred-gray-800 rounded-xl p-6">
+            <div className="flex items-start justify-between mb-4">
+              <Badge className="bg-cred-teal/10 text-cred-teal border border-cred-teal/20 font-medium">
                 {currentArticle?.topic}
               </Badge>
-              <span className="text-white/60 text-sm font-medium">
+              <span className="text-cred-gray-400 text-sm font-medium">
                 {currentIndex + 1} of {articles.length}
               </span>
             </div>
-            <h3 className="text-white font-semibold mb-2 text-lg">
+            <h3 className="text-cred-gray-100 font-bold mb-3 text-xl leading-tight">
               {currentArticle?.headline}
             </h3>
-            <p className="text-white/70 text-sm line-clamp-2">
+            <p className="text-cred-gray-300 leading-relaxed">
               {currentArticle?.aiSummary}
             </p>
           </div>
@@ -154,19 +159,19 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
               size="sm"
               onClick={playPrevious}
               disabled={currentIndex === 0}
-              className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white disabled:opacity-50"
+              className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface hover:text-cred-gray-100 disabled:opacity-30 h-10 w-10 p-0"
             >
               <SkipBack className="w-4 h-4" />
             </Button>
             
             <Button
               onClick={togglePlayback}
-              className="bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 text-white shadow-lg px-6"
+              className="bg-cred-teal text-cred-black hover:bg-cred-teal/90 font-bold px-8 py-3 h-12 shadow-lg"
             >
               {isPlaying ? (
-                <Pause className="w-4 h-4 mr-2" />
+                <Pause className="w-5 h-5 mr-2" />
               ) : (
-                <Play className="w-4 h-4 mr-2" />
+                <Play className="w-5 h-5 mr-2" />
               )}
               {isPlaying ? 'Pause' : 'Play'} Broadcast
             </Button>
@@ -176,18 +181,24 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
               size="sm"
               onClick={playNext}
               disabled={currentIndex === articles.length - 1}
-              className="bg-white/5 border-white/30 text-white hover:bg-white/20 hover:text-white disabled:opacity-50"
+              className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface hover:text-cred-gray-100 disabled:opacity-30 h-10 w-10 p-0"
             >
               <SkipForward className="w-4 h-4" />
             </Button>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full bg-white/10 rounded-full h-2">
-            <div
-              className="bg-gradient-to-r from-purple-500 to-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / articles.length) * 100}%` }}
-            />
+          <div className="space-y-2">
+            <div className="w-full bg-cred-gray-800 rounded-full h-1">
+              <div
+                className="bg-cred-teal h-1 rounded-full transition-all duration-500"
+                style={{ width: `${((currentIndex + 1) / articles.length) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-cred-gray-500">
+              <span>Progress</span>
+              <span>{Math.round(((currentIndex + 1) / articles.length) * 100)}%</span>
+            </div>
           </div>
         </div>
       </CardContent>
