@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Play, Search, BookOpen, MessageSquare, CheckCircle, Mic, MoreHorizontal } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NewsActionsProps {
   article: NewsItem;
@@ -73,31 +74,57 @@ const NewsActions = ({ article, compact = false }: NewsActionsProps) => {
     setLoadingAction('play-audio');
     
     try {
-      // TODO: Replace with actual audio generation endpoint
-      const response = await fetch('/api/generate-audio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `${article.headline}. ${article.aiSummary}`,
-          articleId: article.id,
-        }),
-      });
-
-      if (response.ok) {
-        const { audioUrl } = await response.json();
-        // Create and play audio element
-        const audio = new Audio(audioUrl);
-        audio.play();
-        
-        toast({
-          title: "Playing Audio",
-          description: "Audio playback started for this article.",
+      const audioFilePath = `articles/${article.id}.mp3`;
+      
+      // Check if audio file exists in Supabase storage
+      const { data: existingAudio, error: fetchError } = await supabase
+        .storage
+        .from('audio')
+        .download(audioFilePath);
+      
+      let audioUrl: string;
+      
+      if (fetchError || !existingAudio) {
+        console.log("Audio file not found in storage, generating new audio...");
+        // Generate new audio if not found in storage
+        const response = await fetch('/api/generate-audio', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: `${article.headline}. ${article.aiSummary}`,
+            articleId: article.id,
+          }),
         });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate audio');
+        }
+
+        const { audioUrl: generatedUrl } = await response.json();
+        audioUrl = generatedUrl;
       } else {
-        throw new Error('Failed to generate audio');
+        console.log("Audio file found in storage, using existing file");
+        // Get public URL from stored file
+        const { data: publicUrl } = supabase
+          .storage
+          .from('audio')
+          .getPublicUrl(audioFilePath);
+          
+        audioUrl = publicUrl.publicUrl;
       }
+      
+      console.log("Playing audio from URL:", audioUrl);
+      
+      // Create and play audio element
+      const audio = new Audio(audioUrl);
+      await audio.play();
+      
+      toast({
+        title: "Playing Audio",
+        description: "Audio playback started for this article.",
+      });
     } catch (error) {
       console.error('Error playing audio:', error);
       toast({

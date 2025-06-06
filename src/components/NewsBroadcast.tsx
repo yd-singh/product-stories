@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Play, Pause, SkipForward, SkipBack, Radio } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NewsBroadcastProps {
   articles: NewsItem[];
@@ -15,6 +16,7 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const currentArticle = articles[currentIndex];
@@ -54,51 +56,82 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
 
   const playAudio = async (article: NewsItem) => {
     try {
+      setIsLoading(true);
+      
       if (audio) {
         audio.pause();
         audio.remove();
       }
-
-      // TODO: Replace with actual audio generation endpoint
-      const response = await fetch('/api/generate-audio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `${article.headline}. ${article.aiSummary}`,
-          articleId: article.id,
-        }),
-      });
-
-      if (response.ok) {
-        const { audioUrl } = await response.json();
-        const newAudio = new Audio(audioUrl);
-        
-        newAudio.addEventListener('ended', playNext);
-        newAudio.addEventListener('error', () => {
-          toast({
-            title: "Audio Error",
-            description: "Failed to play audio for this article.",
-            variant: "destructive",
-          });
-          playNext();
+      
+      // Check if audio file already exists in Supabase storage
+      const audioFilePath = `articles/${article.id}.mp3`;
+      
+      const { data: existingAudio, error: fetchError } = await supabase
+        .storage
+        .from('audio')
+        .download(audioFilePath);
+      
+      let audioUrl: string;
+      
+      if (fetchError || !existingAudio) {
+        console.log("Audio file not found in storage, generating new audio...");
+        // Generate new audio if not found in storage
+        const response = await fetch('/api/generate-audio', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: `${article.headline}. ${article.aiSummary}`,
+            articleId: article.id,
+          }),
         });
 
-        setAudio(newAudio);
-        await newAudio.play();
-        setIsPlaying(true);
+        if (!response.ok) {
+          throw new Error('Failed to generate audio');
+        }
+
+        const { audioUrl: generatedUrl } = await response.json();
+        audioUrl = generatedUrl;
       } else {
-        throw new Error('Failed to generate audio');
+        console.log("Audio file found in storage, using existing file");
+        // Create URL from the fetched blob
+        const { data: publicUrl } = supabase
+          .storage
+          .from('audio')
+          .getPublicUrl(audioFilePath);
+          
+        audioUrl = publicUrl.publicUrl;
       }
+      
+      console.log("Playing audio from URL:", audioUrl);
+      
+      const newAudio = new Audio(audioUrl);
+      
+      newAudio.addEventListener('ended', playNext);
+      newAudio.addEventListener('error', (e) => {
+        console.error("Audio playback error:", e);
+        toast({
+          title: "Audio Error",
+          description: "Failed to play audio for this article.",
+          variant: "destructive",
+        });
+        playNext();
+      });
+
+      setAudio(newAudio);
+      await newAudio.play();
+      setIsPlaying(true);
     } catch (error) {
       console.error('Error playing audio:', error);
       toast({
         title: "Error",
-        description: "Failed to generate audio. Skipping to next article.",
+        description: "Failed to play audio. Skipping to next article.",
         variant: "destructive",
       });
       playNext();
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -158,7 +191,7 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
               variant="outline"
               size="sm"
               onClick={playPrevious}
-              disabled={currentIndex === 0}
+              disabled={currentIndex === 0 || isLoading}
               className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface hover:text-cred-gray-100 disabled:opacity-30 h-10 w-10 p-0"
             >
               <SkipBack className="w-4 h-4" />
@@ -166,21 +199,35 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
             
             <Button
               onClick={togglePlayback}
+              disabled={isLoading}
               className="bg-cred-teal text-cred-black hover:bg-cred-teal/90 font-bold px-8 py-3 h-12 shadow-lg"
             >
-              {isPlaying ? (
-                <Pause className="w-5 h-5 mr-2" />
+              {isLoading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-cred-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Loading...
+                </span>
+              ) : isPlaying ? (
+                <>
+                  <Pause className="w-5 h-5 mr-2" />
+                  Pause
+                </>
               ) : (
-                <Play className="w-5 h-5 mr-2" />
+                <>
+                  <Play className="w-5 h-5 mr-2" />
+                  Play Broadcast
+                </>
               )}
-              {isPlaying ? 'Pause' : 'Play'} Broadcast
             </Button>
             
             <Button
               variant="outline"
               size="sm"
               onClick={playNext}
-              disabled={currentIndex === articles.length - 1}
+              disabled={currentIndex === articles.length - 1 || isLoading}
               className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface hover:text-cred-gray-100 disabled:opacity-30 h-10 w-10 p-0"
             >
               <SkipForward className="w-4 h-4" />
