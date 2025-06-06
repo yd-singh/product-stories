@@ -56,16 +56,36 @@ serve(async (req) => {
     const newsData = await newsResponse.json();
     console.log(`Fetched ${newsData.rows?.length || 0} news items from Table1`);
 
+    // Log the first row to see the actual column names
+    if (newsData.rows && newsData.rows.length > 0) {
+      console.log('First row structure:', JSON.stringify(newsData.rows[0], null, 2));
+      console.log('Available columns:', Object.keys(newsData.rows[0]));
+    }
+
     // Transform the data to match our expected format
-    const transformedNews = newsData.rows?.map((row: any) => ({
-      id: row._id,
-      topic: row.Topic || '',
-      headline: row.Headline || '',
-      source: row.Source || '',
-      date: row.Date || '',
-      newsUrl: row['News URL'] || row.newsUrl || '',
-      aiSummary: row['AI News Summary'] || row.aiSummary || '',
-    })) || [];
+    // Try multiple possible column name variations
+    const transformedNews = newsData.rows?.map((row: any) => {
+      const getColumnValue = (possibleNames: string[]) => {
+        for (const name of possibleNames) {
+          if (row[name] !== undefined && row[name] !== null) {
+            return row[name];
+          }
+        }
+        return '';
+      };
+
+      return {
+        id: row._id,
+        topic: getColumnValue(['Topic', 'topic', 'Category', 'category']),
+        headline: getColumnValue(['Headline', 'headline', 'Title', 'title']),
+        source: getColumnValue(['Source', 'source', 'Publisher', 'publisher']),
+        date: getColumnValue(['Date', 'date', 'Published', 'published', 'CreatedAt', 'created_at']),
+        newsUrl: getColumnValue(['News URL', 'newsUrl', 'news_url', 'URL', 'url', 'Link', 'link']),
+        aiSummary: getColumnValue(['AI News Summary', 'aiSummary', 'ai_summary', 'Summary', 'summary', 'AI Summary', 'ai_news_summary']),
+      };
+    }) || [];
+
+    console.log('Transformed news sample:', JSON.stringify(transformedNews.slice(0, 2), null, 2));
 
     return new Response(JSON.stringify({ news: transformedNews }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
