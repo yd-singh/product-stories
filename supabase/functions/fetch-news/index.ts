@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Function to decode HTML entities
+const decodeHtmlEntities = (text: string): string => {
+  const entityMap: { [key: string]: string } = {
+    '&#39;': "'",
+    '&quot;': '"',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&nbsp;': ' ',
+  };
+  
+  return text.replace(/&#39;|&quot;|&amp;|&lt;|&gt;|&nbsp;/g, (match) => entityMap[match] || match);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -76,12 +90,12 @@ serve(async (req) => {
 
       return {
         id: row._id,
-        topic: getColumnValue(['Topic', 'topic', 'Category', 'category']),
-        headline: getColumnValue(['Headline', 'headline', 'Title', 'title']),
-        source: getColumnValue(['Source', 'source', 'Publisher', 'publisher']),
+        topic: decodeHtmlEntities(getColumnValue(['Topic', 'topic', 'Category', 'category'])),
+        headline: decodeHtmlEntities(getColumnValue(['Headline', 'headline', 'Title', 'title'])),
+        source: decodeHtmlEntities(getColumnValue(['Source', 'source', 'Publisher', 'publisher'])),
         date: getColumnValue(['Date', 'date', 'Published', 'published', 'CreatedAt', 'created_at']),
         newsUrl: getColumnValue(['News URL', 'newsUrl', 'news_url', 'URL', 'url', 'Link', 'link']),
-        aiSummary: getColumnValue(['AI News Summary', 'aiSummary', 'ai_summary', 'Summary', 'summary', 'AI Summary', 'ai_news_summary']),
+        aiSummary: decodeHtmlEntities(getColumnValue(['AI News Summary', 'aiSummary', 'ai_summary', 'Summary', 'summary', 'AI Summary', 'ai_news_summary', 'news_summary'])),
       };
     }) || [];
 

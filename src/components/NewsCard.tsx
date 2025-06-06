@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, ExternalLink, User, Sparkles } from "lucide-react";
+import { Calendar, ExternalLink, User, Sparkles, Globe } from "lucide-react";
 import { NewsItem } from "@/hooks/useNews";
 
 interface NewsCardProps {
@@ -26,8 +26,26 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
       Politics: "bg-red-500/20 text-red-400 border-red-500/30",
       Sports: "bg-orange-500/20 text-orange-400 border-orange-500/30",
       Science: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+      RBI: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+      CRED: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+      "PPI Wallet": "bg-indigo-500/20 text-indigo-400 border-indigo-500/30",
     };
     return colors[topic as keyof typeof colors] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
+  };
+
+  const getDomainFromUrl = (url: string) => {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
+  };
+
+  const getPreviewContent = () => {
+    if (article.aiSummary) {
+      return article.aiSummary;
+    }
+    return `Read the latest news from ${article.source} about ${article.topic.toLowerCase()}.`;
   };
 
   if (featured) {
@@ -50,7 +68,7 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
                 {article.headline}
               </CardTitle>
               <CardDescription className="text-white/60">
-                {article.aiSummary}
+                {getPreviewContent()}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -62,6 +80,10 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
                 <div className="flex items-center gap-1">
                   <User className="w-4 h-4" />
                   {article.source}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Globe className="w-4 h-4" />
+                  {getDomainFromUrl(article.newsUrl)}
                 </div>
               </div>
               <Button 
@@ -91,7 +113,7 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
           {article.headline}
         </CardTitle>
         <CardDescription className="text-white/60 line-clamp-3">
-          {article.aiSummary}
+          {getPreviewContent()}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -105,6 +127,18 @@ const NewsCard = ({ article, featured = false }: NewsCardProps) => {
             {article.source}
           </div>
         </div>
+        
+        {/* Link Preview Section */}
+        <div className="bg-white/5 rounded-lg p-3 mb-4 border border-white/10">
+          <div className="flex items-center gap-2 text-xs text-white/50 mb-1">
+            <Globe className="w-3 h-3" />
+            {getDomainFromUrl(article.newsUrl)}
+          </div>
+          <p className="text-white/70 text-sm line-clamp-2">
+            {getPreviewContent()}
+          </p>
+        </div>
+        
         <Button 
           variant="outline" 
           size="sm" 
