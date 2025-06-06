@@ -99,9 +99,16 @@ serve(async (req) => {
       };
     }) || [];
 
-    console.log('Transformed news sample:', JSON.stringify(transformedNews.slice(0, 2), null, 2));
+    // Sort news by date in descending order (newest first)
+    const sortedNews = transformedNews.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return dateB.getTime() - dateA.getTime();
+    });
 
-    return new Response(JSON.stringify({ news: transformedNews }), {
+    console.log('Transformed and sorted news sample:', JSON.stringify(sortedNews.slice(0, 2), null, 2));
+
+    return new Response(JSON.stringify({ news: sortedNews }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
