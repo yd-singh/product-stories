@@ -9,10 +9,12 @@ import { useNews } from "@/hooks/useNews";
 import NewsCard from "@/components/NewsCard";
 import NewsFilter from "@/components/NewsFilter";
 import NewsBroadcast from "@/components/NewsBroadcast";
+import { isSameDay } from "date-fns";
 
 const News = () => {
   const { data: articles = [], isLoading, error } = useNews();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [playingArticleId, setPlayingArticleId] = useState<string | null>(null);
 
   // Get unique tags from articles
@@ -21,16 +23,35 @@ const News = () => {
     return Array.from(new Set(tags)).sort();
   }, [articles]);
 
-  // Filter articles based on selected tags
+  // Filter articles based on selected tags and date
   const filteredArticles = useMemo(() => {
-    if (selectedTags.length === 0) {
-      return articles;
+    let filtered = articles;
+    
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(article => selectedTags.includes(article.topic));
     }
-    return articles.filter(article => selectedTags.includes(article.topic));
-  }, [articles, selectedTags]);
+    
+    if (selectedDate) {
+      filtered = filtered.filter(article => {
+        try {
+          const articleDate = new Date(article.date);
+          return isSameDay(articleDate, selectedDate);
+        } catch {
+          return false;
+        }
+      });
+    }
+    
+    return filtered;
+  }, [articles, selectedTags, selectedDate]);
 
   const featuredArticle = filteredArticles[0];
   const regularArticles = filteredArticles.slice(1);
+
+  const handleClearFilters = () => {
+    setSelectedTags([]);
+    setSelectedDate(undefined);
+  };
 
   if (isLoading) {
     return (
@@ -97,7 +118,9 @@ const News = () => {
                 availableTags={availableTags}
                 selectedTags={selectedTags}
                 onTagsChange={setSelectedTags}
-                onClearFilters={() => setSelectedTags([])}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+                onClearFilters={handleClearFilters}
               />
 
               {/* News Broadcast Player */}
@@ -106,11 +129,11 @@ const News = () => {
               )}
 
               {/* Results Summary */}
-              {selectedTags.length > 0 && (
+              {(selectedTags.length > 0 || selectedDate) && (
                 <div className="flex items-center gap-4 text-white/70">
                   <span>
                     Showing {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''} 
-                    {selectedTags.length > 0 && ` for: ${selectedTags.join(', ')}`}
+                    {(selectedTags.length > 0 || selectedDate) && ' with applied filters'}
                   </span>
                 </div>
               )}
@@ -147,15 +170,15 @@ const News = () => {
               )}
 
               {/* No Results */}
-              {filteredArticles.length === 0 && selectedTags.length > 0 && (
+              {filteredArticles.length === 0 && (selectedTags.length > 0 || selectedDate) && (
                 <Card className="bg-white/5 backdrop-blur-sm border-white/10">
                   <CardContent className="p-8 text-center">
                     <p className="text-white/70 mb-4">
-                      No articles found for the selected topics: {selectedTags.join(', ')}
+                      No articles found for the selected filters.
                     </p>
                     <Button 
                       variant="outline" 
-                      onClick={() => setSelectedTags([])}
+                      onClick={handleClearFilters}
                       className="border-white/20 text-white hover:bg-white/10"
                     >
                       Clear Filters

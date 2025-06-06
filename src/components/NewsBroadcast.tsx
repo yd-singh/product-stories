@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,8 +122,8 @@ const NewsBroadcast = ({ articles }: NewsBroadcastProps) => {
         <CardTitle className="text-white flex items-center gap-3">
           <Volume2 className="w-6 h-6" />
           News Broadcast
-          <Badge className="bg-red-500/20 text-red-400 border border-red-500/30">
-            Live
+          <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white border-none shadow-lg font-bold px-3 py-1 text-xs uppercase tracking-wider">
+            ● LIVE
           </Badge>
         </CardTitle>
       </CardHeader>
