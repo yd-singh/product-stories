@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +29,7 @@ const NewsBroadcastPlayer = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string>("");
   const isNavigatingRef = useRef(false);
+  const shouldAutoPlayRef = useRef(false); // Track if we should auto-play after navigation
 
   // Get the current article from the filtered articles array
   const currentArticle = articles[currentIndex];
@@ -60,8 +60,7 @@ const NewsBroadcastPlayer = ({
     }
     currentAudioUrlRef.current = "";
     
-    // Reset all states
-    setIsPlaying(false);
+    // Reset states but keep auto-play flag
     setCurrentTime(0);
     setDuration(0);
     setIsLoading(false);
@@ -90,6 +89,7 @@ const NewsBroadcastPlayer = ({
             console.log("Audio playback started successfully");
             setIsPlaying(true);
             setIsLoading(false);
+            shouldAutoPlayRef.current = false; // Reset auto-play flag
           }
         })
         .catch((playError) => {
@@ -97,6 +97,7 @@ const NewsBroadcastPlayer = ({
             console.error("Error starting audio playback:", playError);
             setIsPlaying(false);
             setIsLoading(false);
+            shouldAutoPlayRef.current = false;
             toast({
               title: "Audio Error",
               description: "Failed to play audio for this article.",
@@ -115,16 +116,13 @@ const NewsBroadcastPlayer = ({
     setCurrentTime(0);
     
     if (currentIndex < articles.length - 1) {
+      shouldAutoPlayRef.current = true; // Set auto-play flag
       isNavigatingRef.current = true;
       onNext();
-      // Auto-play next article after a short delay
+      // Reset navigation flag after a delay
       setTimeout(() => {
         isNavigatingRef.current = false;
-        const nextArticle = articles[currentIndex + 1];
-        if (nextArticle) {
-          playAudio(nextArticle);
-        }
-      }, 200);
+      }, 100);
     }
   };
 
@@ -133,6 +131,8 @@ const NewsBroadcastPlayer = ({
     
     console.error("Audio playback error:", e);
     cleanupAudio();
+    setIsPlaying(false);
+    shouldAutoPlayRef.current = false;
     toast({
       title: "Audio Error",
       description: "Failed to play audio for this article. Skipping to next.",
@@ -140,11 +140,12 @@ const NewsBroadcastPlayer = ({
     });
     
     if (currentIndex < articles.length - 1) {
+      shouldAutoPlayRef.current = true; // Set auto-play flag
       isNavigatingRef.current = true;
       onNext();
       setTimeout(() => {
         isNavigatingRef.current = false;
-      }, 200);
+      }, 100);
     }
   };
 
@@ -152,13 +153,17 @@ const NewsBroadcastPlayer = ({
   useEffect(() => {
     return () => {
       cleanupAudio();
+      setIsPlaying(false);
+      shouldAutoPlayRef.current = false;
     };
   }, []);
 
   // Stop audio when articles change (filters applied)
   useEffect(() => {
     cleanupAudio();
+    setIsPlaying(false);
     isNavigatingRef.current = false;
+    shouldAutoPlayRef.current = false;
   }, [articles]);
 
   // Reset to first article when articles change
@@ -171,8 +176,9 @@ const NewsBroadcastPlayer = ({
   // Effect to handle article changes due to navigation
   useEffect(() => {
     if (currentArticle && !isNavigatingRef.current) {
-      // Only auto-play if we were already playing
-      if (isPlaying) {
+      // Auto-play if we were playing before navigation or if auto-play flag is set
+      if (shouldAutoPlayRef.current) {
+        console.log("Auto-playing after navigation");
         playAudio(currentArticle);
       }
     }
@@ -185,16 +191,17 @@ const NewsBroadcastPlayer = ({
       console.log("Playing audio for article:", article.id, article.headline);
       setIsLoading(true);
       
-      // Clean up any existing audio first
+      // Clean up any existing audio first (but don't reset isPlaying yet)
       cleanupAudio();
       
       // Get or generate audio for this specific article
       const audioUrl = await getOrGenerateAudio(article);
       
-      // Check if we're still supposed to play this article (user might have navigated away)
+      // Check if we're still supposed to play this article
       if (isNavigatingRef.current || articles[currentIndex]?.id !== article.id) {
         console.log("Navigation occurred during audio loading, aborting");
         setIsLoading(false);
+        setIsPlaying(false);
         return;
       }
       
@@ -224,6 +231,8 @@ const NewsBroadcastPlayer = ({
       if (!isNavigatingRef.current) {
         console.error('Error playing audio:', error);
         cleanupAudio();
+        setIsPlaying(false);
+        shouldAutoPlayRef.current = false;
         toast({
           title: "Error",
           description: "Failed to play audio. Skipping to next article.",
@@ -231,11 +240,12 @@ const NewsBroadcastPlayer = ({
         });
         
         if (currentIndex < articles.length - 1) {
+          shouldAutoPlayRef.current = true;
           isNavigatingRef.current = true;
           onNext();
           setTimeout(() => {
             isNavigatingRef.current = false;
-          }, 200);
+          }, 100);
         }
       }
     }
@@ -258,34 +268,48 @@ const NewsBroadcastPlayer = ({
       console.log("Pausing audio");
       audioRef.current.pause();
       setIsPlaying(false);
+      shouldAutoPlayRef.current = false;
     } else {
       console.log("Starting playback for article:", currentArticle.headline);
+      shouldAutoPlayRef.current = false; // Clear auto-play flag when manually playing
       playAudio(currentArticle);
     }
   };
 
   const handleNext = () => {
-    console.log("Next button clicked");
+    console.log("Next button clicked, was playing:", isPlaying);
+    const wasPlaying = isPlaying;
+    
+    // Set auto-play flag if currently playing
+    shouldAutoPlayRef.current = wasPlaying;
+    
     isNavigatingRef.current = true;
     cleanupAudio();
+    setIsPlaying(false);
     onNext();
     
     // Reset navigation flag after a delay
     setTimeout(() => {
       isNavigatingRef.current = false;
-    }, 200);
+    }, 100);
   };
 
   const handlePrevious = () => {
-    console.log("Previous button clicked");
+    console.log("Previous button clicked, was playing:", isPlaying);
+    const wasPlaying = isPlaying;
+    
+    // Set auto-play flag if currently playing
+    shouldAutoPlayRef.current = wasPlaying;
+    
     isNavigatingRef.current = true;
     cleanupAudio();
+    setIsPlaying(false);
     onPrevious();
     
     // Reset navigation flag after a delay
     setTimeout(() => {
       isNavigatingRef.current = false;
-    }, 200);
+    }, 100);
   };
 
   const handleSeek = (event: React.MouseEvent<HTMLDivElement>) => {
