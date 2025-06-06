@@ -29,15 +29,17 @@ const NewsBroadcastPlayer = ({
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string>("");
+  const isNavigatingRef = useRef(false);
 
   // Get the current article from the filtered articles array
   const currentArticle = articles[currentIndex];
 
-  // Function to completely stop and cleanup current audio
-  const stopAndCleanupAudio = () => {
-    console.log("Stopping and cleaning up audio");
+  // Complete audio cleanup function
+  const cleanupAudio = () => {
+    console.log("Cleaning up audio completely");
+    
     if (audioRef.current) {
-      // Remove all event listeners first
+      // Remove all event listeners
       audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
       audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audioRef.current.removeEventListener('canplaythrough', handleCanPlayThrough);
@@ -48,7 +50,7 @@ const NewsBroadcastPlayer = ({
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current.src = '';
-      audioRef.current.load(); // This clears the audio completely
+      audioRef.current.load();
       audioRef.current = null;
     }
     
@@ -58,6 +60,7 @@ const NewsBroadcastPlayer = ({
     }
     currentAudioUrlRef.current = "";
     
+    // Reset all states
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -66,87 +69,96 @@ const NewsBroadcastPlayer = ({
 
   // Event handlers
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isNavigatingRef.current) {
       setCurrentTime(audioRef.current.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isNavigatingRef.current) {
       console.log("Audio metadata loaded, duration:", audioRef.current.duration);
       setDuration(audioRef.current.duration);
     }
   };
 
   const handleCanPlayThrough = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isNavigatingRef.current) {
       console.log("Audio can play through, starting playback");
       audioRef.current.play()
         .then(() => {
-          console.log("Audio playback started successfully");
-          setIsPlaying(true);
-          setIsLoading(false);
+          if (!isNavigatingRef.current) {
+            console.log("Audio playback started successfully");
+            setIsPlaying(true);
+            setIsLoading(false);
+          }
         })
         .catch((playError) => {
-          console.error("Error starting audio playback:", playError);
-          setIsPlaying(false);
-          setIsLoading(false);
-          toast({
-            title: "Audio Error",
-            description: "Failed to play audio for this article.",
-            variant: "destructive",
-          });
+          if (!isNavigatingRef.current) {
+            console.error("Error starting audio playback:", playError);
+            setIsPlaying(false);
+            setIsLoading(false);
+            toast({
+              title: "Audio Error",
+              description: "Failed to play audio for this article.",
+              variant: "destructive",
+            });
+          }
         });
     }
   };
 
   const handleAudioEnded = () => {
+    if (isNavigatingRef.current) return;
+    
     console.log("Audio ended, moving to next article");
     setIsPlaying(false);
     setCurrentTime(0);
+    
     if (currentIndex < articles.length - 1) {
+      isNavigatingRef.current = true;
       onNext();
-      // Auto-play next article after navigation
+      // Auto-play next article after a short delay
       setTimeout(() => {
+        isNavigatingRef.current = false;
         const nextArticle = articles[currentIndex + 1];
         if (nextArticle) {
           playAudio(nextArticle);
         }
-      }, 100);
+      }, 200);
     }
   };
 
   const handleAudioError = (e: Event) => {
+    if (isNavigatingRef.current) return;
+    
     console.error("Audio playback error:", e);
-    if (audioRef.current) {
-      console.error("Audio error details:", {
-        error: audioRef.current.error,
-        networkState: audioRef.current.networkState,
-        readyState: audioRef.current.readyState,
-        src: audioRef.current.src
-      });
-    }
-    stopAndCleanupAudio();
+    cleanupAudio();
     toast({
       title: "Audio Error",
       description: "Failed to play audio for this article. Skipping to next.",
       variant: "destructive",
     });
+    
     if (currentIndex < articles.length - 1) {
+      isNavigatingRef.current = true;
       onNext();
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 200);
     }
   };
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      stopAndCleanupAudio();
+      cleanupAudio();
     };
   }, []);
 
   // Stop audio when articles change (filters applied)
   useEffect(() => {
-    stopAndCleanupAudio();
+    cleanupAudio();
+    isNavigatingRef.current = false;
   }, [articles]);
 
   // Reset to first article when articles change
@@ -156,16 +168,36 @@ const NewsBroadcastPlayer = ({
     }
   }, [articles, currentIndex, onIndexChange]);
 
+  // Effect to handle article changes due to navigation
+  useEffect(() => {
+    if (currentArticle && !isNavigatingRef.current) {
+      // Only auto-play if we were already playing
+      if (isPlaying) {
+        playAudio(currentArticle);
+      }
+    }
+  }, [currentIndex]);
+
   const playAudio = async (article: NewsItem) => {
+    if (isNavigatingRef.current) return;
+    
     try {
       console.log("Playing audio for article:", article.id, article.headline);
       setIsLoading(true);
       
-      // Stop any existing audio first
-      stopAndCleanupAudio();
+      // Clean up any existing audio first
+      cleanupAudio();
       
       // Get or generate audio for this specific article
       const audioUrl = await getOrGenerateAudio(article);
+      
+      // Check if we're still supposed to play this article (user might have navigated away)
+      if (isNavigatingRef.current || articles[currentIndex]?.id !== article.id) {
+        console.log("Navigation occurred during audio loading, aborting");
+        setIsLoading(false);
+        return;
+      }
+      
       console.log("Got audio URL:", audioUrl);
       currentAudioUrlRef.current = audioUrl;
       
@@ -180,14 +212,6 @@ const NewsBroadcastPlayer = ({
       audio.addEventListener('ended', handleAudioEnded);
       audio.addEventListener('error', handleAudioError);
       
-      audio.addEventListener('loadstart', () => {
-        console.log("Audio loading started");
-      });
-      
-      audio.addEventListener('loadeddata', () => {
-        console.log("Audio data loaded");
-      });
-
       // Set the audio reference and source
       audioRef.current = audio;
       audio.src = audioUrl;
@@ -197,15 +221,22 @@ const NewsBroadcastPlayer = ({
       
       console.log("Audio setup complete");
     } catch (error) {
-      console.error('Error playing audio:', error);
-      stopAndCleanupAudio();
-      toast({
-        title: "Error",
-        description: "Failed to play audio. Skipping to next article.",
-        variant: "destructive",
-      });
-      if (currentIndex < articles.length - 1) {
-        onNext();
+      if (!isNavigatingRef.current) {
+        console.error('Error playing audio:', error);
+        cleanupAudio();
+        toast({
+          title: "Error",
+          description: "Failed to play audio. Skipping to next article.",
+          variant: "destructive",
+        });
+        
+        if (currentIndex < articles.length - 1) {
+          isNavigatingRef.current = true;
+          onNext();
+          setTimeout(() => {
+            isNavigatingRef.current = false;
+          }, 200);
+        }
       }
     }
   };
@@ -235,18 +266,30 @@ const NewsBroadcastPlayer = ({
 
   const handleNext = () => {
     console.log("Next button clicked");
-    stopAndCleanupAudio();
+    isNavigatingRef.current = true;
+    cleanupAudio();
     onNext();
+    
+    // Reset navigation flag after a delay
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 200);
   };
 
   const handlePrevious = () => {
     console.log("Previous button clicked");
-    stopAndCleanupAudio();
+    isNavigatingRef.current = true;
+    cleanupAudio();
     onPrevious();
+    
+    // Reset navigation flag after a delay
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 200);
   };
 
   const handleSeek = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !duration) return;
+    if (!audioRef.current || !duration || isNavigatingRef.current) return;
     
     const progressBar = event.currentTarget;
     const rect = progressBar.getBoundingClientRect();
