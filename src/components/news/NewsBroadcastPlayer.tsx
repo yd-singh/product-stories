@@ -26,15 +26,14 @@ const NewsBroadcastPlayer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [playlistMode, setPlaylistMode] = useState(false); // Track if we're in playlist mode
+  const [isPlaylistMode, setIsPlaylistMode] = useState(false);
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string>("");
+  const isNavigatingRef = useRef(false);
 
-  // Get the current article
   const currentArticle = articles[currentIndex];
 
-  // Clean up audio completely
   const cleanupAudio = () => {
     console.log("Cleaning up audio");
     
@@ -56,7 +55,6 @@ const NewsBroadcastPlayer = ({
     setIsLoading(false);
   };
 
-  // Load and play audio for an article
   const loadAndPlayAudio = async (article: NewsItem, shouldAutoPlay: boolean = true) => {
     console.log("Loading audio for article:", article.id, "Auto-play:", shouldAutoPlay);
     
@@ -64,17 +62,14 @@ const NewsBroadcastPlayer = ({
       setIsLoading(true);
       cleanupAudio();
       
-      // Get audio URL
       const audioUrl = await getOrGenerateAudio(article);
       console.log("Got audio URL:", audioUrl);
       currentAudioUrlRef.current = audioUrl;
       
-      // Create new audio element
       const audio = new Audio();
       audio.crossOrigin = "anonymous";
       audio.src = audioUrl;
       
-      // Set up event listeners
       audio.addEventListener('loadedmetadata', () => {
         console.log("Audio metadata loaded, duration:", audio.duration);
         setDuration(audio.duration || 0);
@@ -98,11 +93,13 @@ const NewsBroadcastPlayer = ({
             .catch((error) => {
               console.error("Error starting playback:", error);
               setIsPlaying(false);
-              toast({
-                title: "Audio Error",
-                description: "Failed to play audio for this article.",
-                variant: "destructive",
-              });
+              if (!isNavigatingRef.current) {
+                toast({
+                  title: "Audio Error",
+                  description: "Failed to play audio for this article.",
+                  variant: "destructive",
+                });
+              }
             });
         }
       });
@@ -112,13 +109,12 @@ const NewsBroadcastPlayer = ({
         setIsPlaying(false);
         setCurrentTime(0);
         
-        // Auto-advance to next article if in playlist mode
-        if (playlistMode && currentIndex < articles.length - 1) {
+        if (isPlaylistMode && currentIndex < articles.length - 1) {
           console.log("Auto-advancing to next article");
           onNext();
-        } else if (playlistMode) {
+        } else if (isPlaylistMode) {
           console.log("Playlist finished");
-          setPlaylistMode(false);
+          setIsPlaylistMode(false);
         }
       });
       
@@ -126,13 +122,17 @@ const NewsBroadcastPlayer = ({
         console.error("Audio error:", e);
         setIsLoading(false);
         setIsPlaying(false);
-        toast({
-          title: "Audio Error",
-          description: "Failed to load audio. Skipping to next article.",
-          variant: "destructive",
-        });
         
-        if (playlistMode && currentIndex < articles.length - 1) {
+        // Only show error if not navigating
+        if (!isNavigatingRef.current) {
+          toast({
+            title: "Audio Error",
+            description: "Failed to load audio. Skipping to next article.",
+            variant: "destructive",
+          });
+        }
+        
+        if (isPlaylistMode && currentIndex < articles.length - 1) {
           onNext();
         }
       });
@@ -144,15 +144,17 @@ const NewsBroadcastPlayer = ({
       console.error('Error loading audio:', error);
       setIsLoading(false);
       setIsPlaying(false);
-      toast({
-        title: "Error",
-        description: "Failed to load audio for this article.",
-        variant: "destructive",
-      });
+      
+      if (!isNavigatingRef.current) {
+        toast({
+          title: "Error",
+          description: "Failed to load audio for this article.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  // Handle play/pause toggle
   const togglePlayback = () => {
     console.log("Toggle playback. Current state:", { isPlaying, currentArticle: currentArticle?.id });
     
@@ -166,17 +168,15 @@ const NewsBroadcastPlayer = ({
     }
 
     if (isPlaying && audioRef.current) {
-      // Pause current audio
       console.log("Pausing audio");
       audioRef.current.pause();
       setIsPlaying(false);
     } else if (audioRef.current && audioRef.current.src) {
-      // Resume existing audio
       console.log("Resuming audio");
       audioRef.current.play()
         .then(() => {
           setIsPlaying(true);
-          setPlaylistMode(true); // Enable playlist mode when playing
+          setIsPlaylistMode(true);
         })
         .catch((error) => {
           console.error("Error resuming playback:", error);
@@ -187,40 +187,44 @@ const NewsBroadcastPlayer = ({
           });
         });
     } else {
-      // Start new audio (Play Broadcast)
       console.log("Starting new broadcast");
-      setPlaylistMode(true); // Enable playlist mode
+      setIsPlaylistMode(true);
       loadAndPlayAudio(currentArticle, true);
     }
   };
 
-  // Handle next button
   const handleNext = () => {
-    console.log("Next button clicked. Playlist mode:", playlistMode);
-    const shouldAutoPlay = playlistMode || isPlaying;
+    console.log("Next button clicked. Playlist mode:", isPlaylistMode);
+    isNavigatingRef.current = true;
+    const shouldAutoPlay = isPlaylistMode || isPlaying;
     setIsPlaying(false);
     onNext();
     
-    // The useEffect will handle loading the new audio
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 100);
+    
     if (shouldAutoPlay) {
-      setPlaylistMode(true);
+      setIsPlaylistMode(true);
     }
   };
 
-  // Handle previous button
   const handlePrevious = () => {
-    console.log("Previous button clicked. Playlist mode:", playlistMode);
-    const shouldAutoPlay = playlistMode || isPlaying;
+    console.log("Previous button clicked. Playlist mode:", isPlaylistMode);
+    isNavigatingRef.current = true;
+    const shouldAutoPlay = isPlaylistMode || isPlaying;
     setIsPlaying(false);
     onPrevious();
     
-    // The useEffect will handle loading the new audio
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 100);
+    
     if (shouldAutoPlay) {
-      setPlaylistMode(true);
+      setIsPlaylistMode(true);
     }
   };
 
-  // Handle seek bar click
   const handleSeek = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!audioRef.current || !duration) return;
     
@@ -233,45 +237,39 @@ const NewsBroadcastPlayer = ({
     setCurrentTime(newTime);
   };
 
-  // Format time display
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Effect to handle article changes
   useEffect(() => {
-    if (currentArticle && playlistMode) {
-      console.log("Article changed, loading new audio. Playlist mode:", playlistMode);
+    if (currentArticle && isPlaylistMode && !isNavigatingRef.current) {
+      console.log("Article changed, loading new audio. Playlist mode:", isPlaylistMode);
       loadAndPlayAudio(currentArticle, true);
     }
   }, [currentIndex, currentArticle]);
 
-  // Reset when articles change (filters applied)
   useEffect(() => {
     cleanupAudio();
     setIsPlaying(false);
-    setPlaylistMode(false);
+    setIsPlaylistMode(false);
   }, [articles]);
 
-  // Clean up on unmount
   useEffect(() => {
     return () => {
       cleanupAudio();
       setIsPlaying(false);
-      setPlaylistMode(false);
+      setIsPlaylistMode(false);
     };
   }, []);
 
-  // Reset to first article when articles change
   useEffect(() => {
     if (currentIndex >= articles.length && articles.length > 0) {
       onIndexChange(0);
     }
   }, [articles, currentIndex, onIndexChange]);
 
-  // Don't render if no articles available
   if (!articles.length || !currentArticle) {
     return (
       <div className="flex items-center justify-center gap-4 text-cred-gray-500">
@@ -284,7 +282,6 @@ const NewsBroadcastPlayer = ({
 
   return (
     <div className="space-y-6">
-      {/* Progress Bar (Seek Bar) */}
       <div className="space-y-3">
         <div 
           className="w-full bg-cred-gray-800 rounded-full h-2 cursor-pointer hover:h-3 transition-all duration-200"
@@ -301,7 +298,6 @@ const NewsBroadcastPlayer = ({
         </div>
       </div>
 
-      {/* Player Controls */}
       <div className="flex items-center justify-center gap-4">
         <Button
           variant="outline"

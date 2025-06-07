@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -16,13 +17,11 @@ const News = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [playingArticleId, setPlayingArticleId] = useState<string | null>(null);
 
-  // Get unique tags from articles
   const availableTags = useMemo(() => {
     const tags = articles.map(article => article.topic).filter(Boolean);
     return Array.from(new Set(tags)).sort();
   }, [articles]);
 
-  // Filter articles based on selected tags and date
   const filteredArticles = useMemo(() => {
     let filtered = articles;
     
@@ -95,8 +94,8 @@ const News = () => {
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="max-w-3xl">
           <h1 className="text-5xl lg:text-6xl font-bold text-cred-gray-100 mb-6 leading-tight">
-            News &{' '}
-            <span className="text-cred-teal">Intelligence</span>
+            Product Stories{' '}
+            <span className="text-cred-teal">By Yash</span>
           </h1>
           <p className="text-xl text-cred-gray-300 leading-relaxed">
             AI-curated news with intelligent summaries and insights. 
@@ -115,7 +114,6 @@ const News = () => {
           </Card>
         ) : (
           <div className="space-y-12">
-            {/* News Filter */}
             <NewsFilter
               availableTags={availableTags}
               selectedTags={selectedTags}
@@ -125,12 +123,10 @@ const News = () => {
               onClearFilters={handleClearFilters}
             />
 
-            {/* News Broadcast Player */}
             {filteredArticles.length > 0 && (
               <NewsBroadcast articles={filteredArticles} />
             )}
 
-            {/* Results Summary */}
             {(selectedTags.length > 0 || selectedDate) && (
               <div className="flex items-center justify-between py-4">
                 <span className="text-cred-gray-400 font-medium">
@@ -148,7 +144,6 @@ const News = () => {
               </div>
             )}
 
-            {/* Featured Article */}
             {featuredArticle && (
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
@@ -165,7 +160,6 @@ const News = () => {
               </div>
             )}
 
-            {/* Recent Articles */}
             {regularArticles.length > 0 && (
               <div className="space-y-8">
                 <h2 className="text-2xl font-bold text-cred-gray-100">Recent Articles</h2>
@@ -181,7 +175,6 @@ const News = () => {
               </div>
             )}
 
-            {/* No Results */}
             {filteredArticles.length === 0 && (selectedTags.length > 0 || selectedDate) && (
               <Card className="cred-surface border-cred-gray-800">
                 <CardContent className="p-12 text-center space-y-6">
