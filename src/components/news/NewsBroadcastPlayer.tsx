@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,28 +26,19 @@ const NewsBroadcastPlayer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playlistMode, setPlaylistMode] = useState(false); // Track if we're in playlist mode
   const { toast } = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string>("");
-  const isNavigatingRef = useRef(false);
-  const shouldAutoPlayRef = useRef(false); // Track if we should auto-play after navigation
 
-  // Get the current article from the filtered articles array
+  // Get the current article
   const currentArticle = articles[currentIndex];
 
-  // Complete audio cleanup function
+  // Clean up audio completely
   const cleanupAudio = () => {
-    console.log("Cleaning up audio completely");
+    console.log("Cleaning up audio");
     
     if (audioRef.current) {
-      // Remove all event listeners
-      audioRef.current.removeEventListener('timeupdate', handleTimeUpdate);
-      audioRef.current.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audioRef.current.removeEventListener('canplaythrough', handleCanPlayThrough);
-      audioRef.current.removeEventListener('ended', handleAudioEnded);
-      audioRef.current.removeEventListener('error', handleAudioError);
-      
-      // Stop and clear audio
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current.src = '';
@@ -54,208 +46,117 @@ const NewsBroadcastPlayer = ({
       audioRef.current = null;
     }
     
-    // Clean up blob URL if it exists
     if (currentAudioUrlRef.current.startsWith('blob:')) {
       URL.revokeObjectURL(currentAudioUrlRef.current);
     }
     currentAudioUrlRef.current = "";
     
-    // Reset states but keep auto-play flag
     setCurrentTime(0);
     setDuration(0);
     setIsLoading(false);
   };
 
-  // Event handlers
-  const handleTimeUpdate = () => {
-    if (audioRef.current && !isNavigatingRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current && !isNavigatingRef.current) {
-      console.log("Audio metadata loaded, duration:", audioRef.current.duration);
-      setDuration(audioRef.current.duration);
-    }
-  };
-
-  const handleCanPlayThrough = () => {
-    if (audioRef.current && !isNavigatingRef.current) {
-      console.log("Audio can play through, starting playback");
-      audioRef.current.play()
-        .then(() => {
-          if (!isNavigatingRef.current) {
-            console.log("Audio playback started successfully");
-            setIsPlaying(true);
-            setIsLoading(false);
-            shouldAutoPlayRef.current = false; // Reset auto-play flag
-          }
-        })
-        .catch((playError) => {
-          if (!isNavigatingRef.current) {
-            console.error("Error starting audio playback:", playError);
-            setIsPlaying(false);
-            setIsLoading(false);
-            shouldAutoPlayRef.current = false;
-            toast({
-              title: "Audio Error",
-              description: "Failed to play audio for this article.",
-              variant: "destructive",
-            });
-          }
-        });
-    }
-  };
-
-  const handleAudioEnded = () => {
-    if (isNavigatingRef.current) return;
-    
-    console.log("Audio ended, moving to next article");
-    setIsPlaying(false);
-    setCurrentTime(0);
-    
-    if (currentIndex < articles.length - 1) {
-      shouldAutoPlayRef.current = true; // Set auto-play flag
-      isNavigatingRef.current = true;
-      onNext();
-      // Reset navigation flag after a delay
-      setTimeout(() => {
-        isNavigatingRef.current = false;
-      }, 100);
-    }
-  };
-
-  const handleAudioError = (e: Event) => {
-    if (isNavigatingRef.current) return;
-    
-    console.error("Audio playback error:", e);
-    cleanupAudio();
-    setIsPlaying(false);
-    shouldAutoPlayRef.current = false;
-    toast({
-      title: "Audio Error",
-      description: "Failed to play audio for this article. Skipping to next.",
-      variant: "destructive",
-    });
-    
-    if (currentIndex < articles.length - 1) {
-      shouldAutoPlayRef.current = true; // Set auto-play flag
-      isNavigatingRef.current = true;
-      onNext();
-      setTimeout(() => {
-        isNavigatingRef.current = false;
-      }, 100);
-    }
-  };
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      cleanupAudio();
-      setIsPlaying(false);
-      shouldAutoPlayRef.current = false;
-    };
-  }, []);
-
-  // Stop audio when articles change (filters applied)
-  useEffect(() => {
-    cleanupAudio();
-    setIsPlaying(false);
-    isNavigatingRef.current = false;
-    shouldAutoPlayRef.current = false;
-  }, [articles]);
-
-  // Reset to first article when articles change
-  useEffect(() => {
-    if (currentIndex >= articles.length && articles.length > 0) {
-      onIndexChange(0);
-    }
-  }, [articles, currentIndex, onIndexChange]);
-
-  // Effect to handle article changes due to navigation
-  useEffect(() => {
-    if (currentArticle && !isNavigatingRef.current) {
-      // Auto-play if we were playing before navigation or if auto-play flag is set
-      if (shouldAutoPlayRef.current) {
-        console.log("Auto-playing after navigation");
-        playAudio(currentArticle);
-      }
-    }
-  }, [currentIndex]);
-
-  const playAudio = async (article: NewsItem) => {
-    if (isNavigatingRef.current) return;
+  // Load and play audio for an article
+  const loadAndPlayAudio = async (article: NewsItem, shouldAutoPlay: boolean = true) => {
+    console.log("Loading audio for article:", article.id, "Auto-play:", shouldAutoPlay);
     
     try {
-      console.log("Playing audio for article:", article.id, article.headline);
       setIsLoading(true);
-      
-      // Clean up any existing audio first (but don't reset isPlaying yet)
       cleanupAudio();
       
-      // Get or generate audio for this specific article
+      // Get audio URL
       const audioUrl = await getOrGenerateAudio(article);
-      
-      // Check if we're still supposed to play this article
-      if (isNavigatingRef.current || articles[currentIndex]?.id !== article.id) {
-        console.log("Navigation occurred during audio loading, aborting");
-        setIsLoading(false);
-        setIsPlaying(false);
-        return;
-      }
-      
       console.log("Got audio URL:", audioUrl);
       currentAudioUrlRef.current = audioUrl;
       
       // Create new audio element
       const audio = new Audio();
       audio.crossOrigin = "anonymous";
-      
-      // Set up event listeners
-      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.addEventListener('timeupdate', handleTimeUpdate);
-      audio.addEventListener('canplaythrough', handleCanPlayThrough);
-      audio.addEventListener('ended', handleAudioEnded);
-      audio.addEventListener('error', handleAudioError);
-      
-      // Set the audio reference and source
-      audioRef.current = audio;
       audio.src = audioUrl;
       
-      // Load the audio
-      audio.load();
+      // Set up event listeners
+      audio.addEventListener('loadedmetadata', () => {
+        console.log("Audio metadata loaded, duration:", audio.duration);
+        setDuration(audio.duration || 0);
+      });
       
-      console.log("Audio setup complete");
-    } catch (error) {
-      if (!isNavigatingRef.current) {
-        console.error('Error playing audio:', error);
-        cleanupAudio();
+      audio.addEventListener('timeupdate', () => {
+        setCurrentTime(audio.currentTime);
+      });
+      
+      audio.addEventListener('canplaythrough', () => {
+        console.log("Audio can play through");
+        setIsLoading(false);
+        
+        if (shouldAutoPlay) {
+          console.log("Auto-playing audio");
+          audio.play()
+            .then(() => {
+              setIsPlaying(true);
+              console.log("Audio playback started");
+            })
+            .catch((error) => {
+              console.error("Error starting playback:", error);
+              setIsPlaying(false);
+              toast({
+                title: "Audio Error",
+                description: "Failed to play audio for this article.",
+                variant: "destructive",
+              });
+            });
+        }
+      });
+      
+      audio.addEventListener('ended', () => {
+        console.log("Audio ended");
         setIsPlaying(false);
-        shouldAutoPlayRef.current = false;
+        setCurrentTime(0);
+        
+        // Auto-advance to next article if in playlist mode
+        if (playlistMode && currentIndex < articles.length - 1) {
+          console.log("Auto-advancing to next article");
+          onNext();
+        } else if (playlistMode) {
+          console.log("Playlist finished");
+          setPlaylistMode(false);
+        }
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error("Audio error:", e);
+        setIsLoading(false);
+        setIsPlaying(false);
         toast({
-          title: "Error",
-          description: "Failed to play audio. Skipping to next article.",
+          title: "Audio Error",
+          description: "Failed to load audio. Skipping to next article.",
           variant: "destructive",
         });
         
-        if (currentIndex < articles.length - 1) {
-          shouldAutoPlayRef.current = true;
-          isNavigatingRef.current = true;
+        if (playlistMode && currentIndex < articles.length - 1) {
           onNext();
-          setTimeout(() => {
-            isNavigatingRef.current = false;
-          }, 100);
         }
-      }
+      });
+      
+      audioRef.current = audio;
+      audio.load();
+      
+    } catch (error) {
+      console.error('Error loading audio:', error);
+      setIsLoading(false);
+      setIsPlaying(false);
+      toast({
+        title: "Error",
+        description: "Failed to load audio for this article.",
+        variant: "destructive",
+      });
     }
   };
 
+  // Handle play/pause toggle
   const togglePlayback = () => {
-    console.log("Toggle playback clicked. Current state:", { isPlaying, currentArticle: currentArticle?.id });
+    console.log("Toggle playback. Current state:", { isPlaying, currentArticle: currentArticle?.id });
     
     if (!currentArticle) {
-      console.error("No current article available");
       toast({
         title: "Error",
         description: "No article available to play.",
@@ -265,55 +166,63 @@ const NewsBroadcastPlayer = ({
     }
 
     if (isPlaying && audioRef.current) {
+      // Pause current audio
       console.log("Pausing audio");
       audioRef.current.pause();
       setIsPlaying(false);
-      shouldAutoPlayRef.current = false;
+    } else if (audioRef.current && audioRef.current.src) {
+      // Resume existing audio
+      console.log("Resuming audio");
+      audioRef.current.play()
+        .then(() => {
+          setIsPlaying(true);
+          setPlaylistMode(true); // Enable playlist mode when playing
+        })
+        .catch((error) => {
+          console.error("Error resuming playback:", error);
+          toast({
+            title: "Audio Error",
+            description: "Failed to resume audio playback.",
+            variant: "destructive",
+          });
+        });
     } else {
-      console.log("Starting playback for article:", currentArticle.headline);
-      shouldAutoPlayRef.current = false; // Clear auto-play flag when manually playing
-      playAudio(currentArticle);
+      // Start new audio (Play Broadcast)
+      console.log("Starting new broadcast");
+      setPlaylistMode(true); // Enable playlist mode
+      loadAndPlayAudio(currentArticle, true);
     }
   };
 
+  // Handle next button
   const handleNext = () => {
-    console.log("Next button clicked, was playing:", isPlaying);
-    const wasPlaying = isPlaying;
-    
-    // Set auto-play flag if currently playing
-    shouldAutoPlayRef.current = wasPlaying;
-    
-    isNavigatingRef.current = true;
-    cleanupAudio();
+    console.log("Next button clicked. Playlist mode:", playlistMode);
+    const shouldAutoPlay = playlistMode || isPlaying;
     setIsPlaying(false);
     onNext();
     
-    // Reset navigation flag after a delay
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 100);
+    // The useEffect will handle loading the new audio
+    if (shouldAutoPlay) {
+      setPlaylistMode(true);
+    }
   };
 
+  // Handle previous button
   const handlePrevious = () => {
-    console.log("Previous button clicked, was playing:", isPlaying);
-    const wasPlaying = isPlaying;
-    
-    // Set auto-play flag if currently playing
-    shouldAutoPlayRef.current = wasPlaying;
-    
-    isNavigatingRef.current = true;
-    cleanupAudio();
+    console.log("Previous button clicked. Playlist mode:", playlistMode);
+    const shouldAutoPlay = playlistMode || isPlaying;
     setIsPlaying(false);
     onPrevious();
     
-    // Reset navigation flag after a delay
-    setTimeout(() => {
-      isNavigatingRef.current = false;
-    }, 100);
+    // The useEffect will handle loading the new audio
+    if (shouldAutoPlay) {
+      setPlaylistMode(true);
+    }
   };
 
+  // Handle seek bar click
   const handleSeek = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current || !duration || isNavigatingRef.current) return;
+    if (!audioRef.current || !duration) return;
     
     const progressBar = event.currentTarget;
     const rect = progressBar.getBoundingClientRect();
@@ -324,11 +233,43 @@ const NewsBroadcastPlayer = ({
     setCurrentTime(newTime);
   };
 
+  // Format time display
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  // Effect to handle article changes
+  useEffect(() => {
+    if (currentArticle && playlistMode) {
+      console.log("Article changed, loading new audio. Playlist mode:", playlistMode);
+      loadAndPlayAudio(currentArticle, true);
+    }
+  }, [currentIndex, currentArticle]);
+
+  // Reset when articles change (filters applied)
+  useEffect(() => {
+    cleanupAudio();
+    setIsPlaying(false);
+    setPlaylistMode(false);
+  }, [articles]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      cleanupAudio();
+      setIsPlaying(false);
+      setPlaylistMode(false);
+    };
+  }, []);
+
+  // Reset to first article when articles change
+  useEffect(() => {
+    if (currentIndex >= articles.length && articles.length > 0) {
+      onIndexChange(0);
+    }
+  }, [articles, currentIndex, onIndexChange]);
 
   // Don't render if no articles available
   if (!articles.length || !currentArticle) {
@@ -343,7 +284,7 @@ const NewsBroadcastPlayer = ({
 
   return (
     <div className="space-y-6">
-      {/* Progress Bar */}
+      {/* Progress Bar (Seek Bar) */}
       <div className="space-y-3">
         <div 
           className="w-full bg-cred-gray-800 rounded-full h-2 cursor-pointer hover:h-3 transition-all duration-200"
@@ -393,7 +334,7 @@ const NewsBroadcastPlayer = ({
           ) : (
             <>
               <Play className="w-5 h-5 mr-2" />
-              Play Broadcast
+              {audioRef.current && audioRef.current.src ? 'Resume' : 'Play Broadcast'}
             </>
           )}
         </Button>
