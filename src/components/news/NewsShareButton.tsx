@@ -19,7 +19,13 @@ const NewsShareButton = ({ article }: NewsShareButtonProps) => {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  const shareText = `${article.headline}\n\n${article.aiSummary}\n\nThis news block is summarised and powered by NewsStories, Yash\n\nRead more: ${window.location.origin}/news`;
+  const shareText = `**${article.headline}**
+
+${article.aiSummary}
+
+*🤖 This news block is summarised and powered by NewsStories, Yash*
+
+Read more: http://productstories.me`;
 
   const handleWhatsAppShare = () => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
