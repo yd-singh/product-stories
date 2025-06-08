@@ -22,19 +22,15 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { endpoint, newsId, debateTopic }: WebhookRequest = await req.json();
 
-    // Get Basic Auth credentials from environment
-    const username = Deno.env.get("N8N_API_USERNAME");
-    const password = Deno.env.get("N8N_API_PASSWORD");
+    // Get API key from environment (using the key you provided)
+    const apiKey = Deno.env.get("N8N_API_KEY");
 
-    if (!username || !password) {
-      throw new Error("N8N API credentials not configured");
+    if (!apiKey) {
+      throw new Error("N8N API key not configured");
     }
-
-    // Create Basic Auth header
-    const basicAuth = btoa(`${username}:${password}`);
     
     // Prepare the request body based on the endpoint
-    let body: any = { newsId };
+    let body: any = { id: newsId }; // Note: using "id" to match your curl example
     
     if (endpoint === 'debate' && debateTopic) {
       body.debateTopic = debateTopic;
@@ -47,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${basicAuth}`,
+        'Authentication': apiKey, // Using simple API key authentication
       },
       body: JSON.stringify(body),
     });
