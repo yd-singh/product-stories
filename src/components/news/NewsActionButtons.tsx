@@ -6,6 +6,7 @@ import { Loader2, Search, BookOpen, MessageSquare, CheckCircle, Mic, MoreHorizon
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NewsActionButtonsProps {
   articleId: string;
@@ -36,35 +37,30 @@ const NewsActionButtons = ({ articleId, compact = false }: NewsActionButtonsProp
     setLoadingAction(actionId);
     
     try {
-      const baseUrl = 'https://n8n.srv848613.hstgr.cloud/webhook';
-      const url = `${baseUrl}/${endpoint}`;
-      
-      let body: any = { newsId: articleId };
-      
-      // For debate, we might want to add debate topic in the future
-      if (actionId === 'debate') {
-        // For now, just send newsId. Can be extended later for debate topic
-        body = { newsId: articleId };
+      // Get the Basic Auth credentials from Supabase secrets
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
       }
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Note: Basic auth credentials should be added via environment variables
-          // For now, using placeholder - you'll need to add the actual credentials
-        },
-        body: JSON.stringify(body),
+      // Call the edge function to make the authenticated request
+      const { data, error } = await supabase.functions.invoke('trigger-n8n-webhook', {
+        body: {
+          endpoint,
+          newsId: articleId,
+          // For debate, we might want to add debate topic in the future
+          ...(actionId === 'debate' && { debateTopic: 'General discussion' })
+        }
       });
 
-      if (response.ok) {
-        toast({
-          title: "Action Triggered",
-          description: `${actionLabel} has been initiated for this article.`,
-        });
-      } else {
-        throw new Error(`HTTP ${response.status}`);
+      if (error) {
+        throw error;
       }
+
+      toast({
+        title: "Action Triggered",
+        description: `${actionLabel} has been initiated for this article.`,
+      });
     } catch (error) {
       console.error(`Error triggering ${actionId}:`, error);
       toast({
