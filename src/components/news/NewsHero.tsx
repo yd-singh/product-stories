@@ -16,8 +16,10 @@ const NewsHero = () => {
           <p className="text-lg text-cred-gray-400 leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
             AI-powered news with intelligent summaries and insights.
           </p>
-          <p className="text-lg leading-relaxed animate-fade-in bg-gradient-to-r from-black via-cred-gray-300 via-white via-cred-gray-400 to-red-900 bg-[length:300%_100%] bg-clip-text text-transparent animate-shine font-medium" style={{ animationDelay: '0.4s' }}>
-            By Yash
+          <p className="text-lg leading-relaxed animate-fade-in font-medium relative" style={{ animationDelay: '0.4s' }}>
+            <span className="bg-gradient-to-r from-cred-gray-600 via-cred-gray-100 via-cred-gray-300 via-red-400 to-cred-gray-600 bg-[length:400%_100%] bg-clip-text text-transparent animate-[shine_4s_ease-in-out_infinite]">
+              By Yash
+            </span>
           </p>
         </div>
       </div>
