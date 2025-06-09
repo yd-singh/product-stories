@@ -11,7 +11,7 @@ const NewsHero = () => {
         </h1>
         <div className="space-y-3">
           <p className="text-xl text-cred-gray-300 leading-relaxed font-medium animate-fade-in">
-            <span className="text-white font-bold text-2xl drop-shadow-lg">I</span>ntuitive, <span className="text-white font-bold text-2xl drop-shadow-lg">I</span>nteractive, <span className="text-white font-bold text-2xl drop-shadow-lg">I</span>ntelligent.
+            Intuitive, Interactive, Intelligent.
           </p>
           <p className="text-lg text-cred-gray-400 leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
             AI-powered news with intelligent summaries and insights.
