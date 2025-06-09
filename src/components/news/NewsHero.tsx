@@ -4,10 +4,12 @@ const NewsHero = () => {
     <div className="max-w-7xl mx-auto px-6 py-16">
       <div className="max-w-3xl">
         <h1 className="text-5xl lg:text-6xl font-bold text-cred-gray-100 mb-6 leading-tight">
-          News Reimagined{' '}
-          <span className="text-cred-teal relative animate-pulse">
+          News{' '}
+          <span className="relative bg-gradient-to-r from-cred-teal via-cred-purple to-cred-teal bg-[length:200%_100%] bg-clip-text text-transparent animate-shine">
+            Reimagined
+          </span>{' '}
+          <span className="text-cred-teal">
             By Yash
-            <span className="absolute inset-0 text-cred-teal opacity-50 animate-ping">By Yash</span>
           </span>
         </h1>
         <div className="space-y-3">
