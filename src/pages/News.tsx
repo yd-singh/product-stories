@@ -1,14 +1,12 @@
+
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useNews } from "@/hooks/useNews";
-import NewsCard from "@/components/NewsCard";
-import NewsFilter from "@/components/NewsFilter";
-import NewsBroadcast from "@/components/NewsBroadcast";
 import { isSameDay } from "date-fns";
+import NewsHeader from "@/components/news/NewsHeader";
+import NewsHero from "@/components/news/NewsHero";
+import NewsContent from "@/components/news/NewsContent";
+import NewsLoadingState from "@/components/news/NewsLoadingState";
+import NewsErrorState from "@/components/news/NewsErrorState";
 
 const News = () => {
   const { data: articles = [], isLoading, error } = useNews();
@@ -42,163 +40,34 @@ const News = () => {
     return filtered;
   }, [articles, selectedTags, selectedDate]);
 
-  const featuredArticle = filteredArticles[0];
-  const regularArticles = filteredArticles.slice(1);
-
   const handleClearFilters = () => {
     setSelectedTags([]);
     setSelectedDate(undefined);
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-cred-black flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-cred-teal border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-cred-gray-300 font-medium">Loading news...</p>
-        </div>
-      </div>
-    );
+    return <NewsLoadingState />;
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-cred-black flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <p className="text-red-400 text-lg font-medium">Error loading news</p>
-          <p className="text-cred-gray-400 text-sm">{error.message}</p>
-          <Button asChild variant="outline" className="border-cred-gray-700 text-cred-gray-100 hover:bg-cred-surface">
-            <Link to="/">Back to Dashboard</Link>
-          </Button>
-        </div>
-      </div>
-    );
+    return <NewsErrorState error={error} />;
   }
 
   return (
     <div className="min-h-screen bg-cred-black">
-      {/* Header */}
-      <div className="border-b border-cred-gray-800">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <Button asChild variant="ghost" className="text-cred-gray-300 hover:text-cred-gray-100 hover:bg-cred-surface -ml-3">
-            <Link to="/" className="flex items-center gap-3">
-              <ArrowLeft className="w-4 h-4" />
-              <span className="font-medium">Back</span>
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-6 py-16">
-        <div className="max-w-3xl">
-          <h1 className="text-5xl lg:text-6xl font-bold text-cred-gray-100 mb-6 leading-tight">
-            News Reimagined{' '}
-            <span className="text-cred-teal relative animate-pulse">
-              By Yash
-              <span className="absolute inset-0 text-cred-teal opacity-50 animate-ping">By Yash</span>
-            </span>
-          </h1>
-          <div className="space-y-3">
-            <p className="text-xl text-cred-gray-300 leading-relaxed font-medium animate-fade-in">
-              Intuitive, Interactive, Intelligent.
-            </p>
-            <p className="text-lg text-cred-gray-400 leading-relaxed animate-fade-in" style={{ animationDelay: '0.2s' }}>
-              AI-powered news with intelligent summaries and insights.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 pb-24">
-        {articles.length === 0 ? (
-          <Card className="cred-surface border-cred-gray-800">
-            <CardContent className="p-12 text-center">
-              <p className="text-cred-gray-400 text-lg">No news articles available</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-12">
-            <NewsFilter
-              availableTags={availableTags}
-              selectedTags={selectedTags}
-              onTagsChange={setSelectedTags}
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-              onClearFilters={handleClearFilters}
-            />
-
-            {filteredArticles.length > 0 && (
-              <NewsBroadcast articles={filteredArticles} />
-            )}
-
-            {(selectedTags.length > 0 || selectedDate) && (
-              <div className="flex items-center justify-between py-4">
-                <span className="text-cred-gray-400 font-medium">
-                  {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''} found
-                </span>
-                {(selectedTags.length > 0 || selectedDate) && (
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleClearFilters}
-                    className="text-cred-gray-400 hover:text-cred-gray-200 hover:bg-cred-surface"
-                  >
-                    Clear filters
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {featuredArticle && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-bold text-cred-gray-100">Featured</h2>
-                  <Badge className="bg-cred-teal/10 text-cred-teal border-cred-teal/20 font-medium">
-                    Latest
-                  </Badge>
-                </div>
-                <NewsCard 
-                  article={featuredArticle} 
-                  featured={true}
-                  isPlaying={playingArticleId === featuredArticle.id}
-                />
-              </div>
-            )}
-
-            {regularArticles.length > 0 && (
-              <div className="space-y-8">
-                <h2 className="text-2xl font-bold text-cred-gray-100">Recent Articles</h2>
-                <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {regularArticles.map((article) => (
-                    <NewsCard 
-                      key={article.id} 
-                      article={article}
-                      isPlaying={playingArticleId === article.id}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {filteredArticles.length === 0 && (selectedTags.length > 0 || selectedDate) && (
-              <Card className="cred-surface border-cred-gray-800">
-                <CardContent className="p-12 text-center space-y-6">
-                  <p className="text-cred-gray-400 text-lg">
-                    No articles match your filters
-                  </p>
-                  <Button 
-                    onClick={handleClearFilters}
-                    className="bg-cred-teal text-cred-black hover:bg-cred-teal/90 font-medium"
-                  >
-                    Clear Filters
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
+      <NewsHeader />
+      <NewsHero />
+      <NewsContent
+        articles={articles}
+        availableTags={availableTags}
+        selectedTags={selectedTags}
+        onTagsChange={setSelectedTags}
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+        onClearFilters={handleClearFilters}
+        filteredArticles={filteredArticles}
+        playingArticleId={playingArticleId}
+      />
     </div>
   );
 };
