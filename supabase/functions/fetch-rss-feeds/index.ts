@@ -14,6 +14,7 @@ interface SeatableResponse {
 }
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -21,16 +22,37 @@ serve(async (req) => {
   try {
     console.log('Fetching RSS feeds from Seatable NewsCollections...')
     
+    const seatableToken = Deno.env.get('SEATABLE_API_TOKEN')
+    if (!seatableToken) {
+      console.error('SEATABLE_API_TOKEN not found')
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configuration error: Missing API token',
+          rssFeeds: [],
+          total: 0
+        }),
+        { 
+          status: 500, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
+    }
+    
     // First, get access token
     const authResponse = await fetch('https://cloud.seatable.io/api/v2.1/dtable/app-access-token/', {
       method: 'GET',
       headers: {
-        'Authorization': 'Token 3fc2170289fcdbb32e12c8d68f28a854dc4e3b77',
+        'Authorization': `Token ${seatableToken}`,
         'Content-Type': 'application/json',
       },
     })
 
     if (!authResponse.ok) {
+      const errorText = await authResponse.text()
+      console.error(`Failed to get access token: ${authResponse.status} - ${errorText}`)
       throw new Error(`Failed to get access token: ${authResponse.status}`)
     }
 
@@ -47,6 +69,8 @@ serve(async (req) => {
     })
 
     if (!dataResponse.ok) {
+      const errorText = await dataResponse.text()
+      console.error(`Failed to fetch RSS data: ${dataResponse.status} - ${errorText}`)
       throw new Error(`Failed to fetch RSS data: ${dataResponse.status}`)
     }
 
