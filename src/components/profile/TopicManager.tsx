@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,16 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Rss, Trash2, ExternalLink } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Rss, Trash2, ExternalLink, Database } from "lucide-react";
 import { useUserTopics, useCreateTopic, UserTopic } from "@/hooks/useUserProfile";
+import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { useToast } from "@/hooks/use-toast";
 
 const TopicManager = () => {
   const { data: topics = [], isLoading } = useUserTopics();
+  const { data: availableRSSFeeds = [], isLoading: rssLoading } = useRSSFeeds();
   const createTopic = useCreateTopic();
   const { toast } = useToast();
   
   const [showForm, setShowForm] = useState(false);
+  const [selectedRSSFeed, setSelectedRSSFeed] = useState<string>('');
   const [formData, setFormData] = useState({
     topic_name: '',
     rss_url: '',
@@ -26,6 +29,18 @@ const TopicManager = () => {
     auto_late_night: false,
     auto_podcast: false,
   });
+
+  const handleRSSSelection = (feedId: string) => {
+    const selectedFeed = availableRSSFeeds.find(feed => feed.id === feedId);
+    if (selectedFeed) {
+      setSelectedRSSFeed(feedId);
+      setFormData({
+        ...formData,
+        topic_name: selectedFeed.title,
+        rss_url: selectedFeed.rss_url,
+      });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +71,7 @@ const TopicManager = () => {
       auto_late_night: false,
       auto_podcast: false,
     });
+    setSelectedRSSFeed('');
     setShowForm(false);
   };
 
@@ -110,6 +126,36 @@ const TopicManager = () => {
         {showForm && (
           <CardContent className="border-t border-cred-gray-800">
             <form onSubmit={handleSubmit} className="space-y-6 pt-6">
+              {/* RSS Feed Selection */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Database className="w-4 h-4 text-cred-teal" />
+                  <Label className="text-cred-gray-200 font-medium">
+                    Choose from Available RSS Feeds
+                  </Label>
+                </div>
+                
+                <Select value={selectedRSSFeed} onValueChange={handleRSSSelection}>
+                  <SelectTrigger className="bg-cred-surface border-cred-gray-700 text-cred-gray-100">
+                    <SelectValue placeholder={rssLoading ? "Loading feeds..." : "Select an RSS feed from database"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-cred-surface border-cred-gray-700">
+                    {availableRSSFeeds.map((feed) => (
+                      <SelectItem 
+                        key={feed.id} 
+                        value={feed.id}
+                        className="text-cred-gray-100 hover:bg-cred-gray-800"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{feed.title}</span>
+                          <span className="text-xs text-cred-gray-400">{feed.source}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="topic_name" className="text-cred-gray-200">
@@ -126,14 +172,15 @@ const TopicManager = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="rss_url" className="text-cred-gray-200">
-                    RSS URL (Optional)
+                    RSS URL
                   </Label>
                   <Input
                     id="rss_url"
                     value={formData.rss_url}
                     onChange={(e) => setFormData({ ...formData, rss_url: e.target.value })}
-                    placeholder="https://example.com/feed.xml"
+                    placeholder="Automatically filled when selecting from database"
                     className="bg-cred-surface border-cred-gray-700 text-cred-gray-100"
+                    readOnly={!!selectedRSSFeed}
                   />
                 </div>
               </div>
@@ -176,7 +223,20 @@ const TopicManager = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setSelectedRSSFeed('');
+                    setFormData({
+                      topic_name: '',
+                      rss_url: '',
+                      auto_research: false,
+                      auto_history: false,
+                      auto_debate: false,
+                      auto_fact_check: false,
+                      auto_late_night: false,
+                      auto_podcast: false,
+                    });
+                  }}
                   className="border-cred-gray-700 text-cred-gray-300 hover:bg-cred-surface"
                 >
                   Cancel
