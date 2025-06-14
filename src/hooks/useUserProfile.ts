@@ -38,7 +38,7 @@ export const useUserProfile = () => {
     queryFn: async (): Promise<UserProfile | null> => {
       if (!user) return null;
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('user_profiles')
         .select('*')
         .eq('user_id', user.id)
@@ -62,7 +62,7 @@ export const useUserTopics = () => {
     queryFn: async (): Promise<UserTopic[]> => {
       if (!user) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('user_topics')
         .select('*')
         .eq('user_id', user.id)
@@ -85,7 +85,7 @@ export const useCreateTopic = () => {
     mutationFn: async (topic: Omit<UserTopic, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('user_topics')
         .insert({
           ...topic,
@@ -123,7 +123,7 @@ export const useUpdateProfile = () => {
     mutationFn: async (updates: Partial<UserProfile>) => {
       if (!user) throw new Error('User not authenticated');
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('user_profiles')
         .update(updates)
         .eq('user_id', user.id)
